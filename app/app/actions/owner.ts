@@ -1,0 +1,73 @@
+"use server";
+import bcrypt from "bcryptjs";
+import { headers } from "next/headers";
+import { db, log, rateOk } from "@/lib/db";
+import { startSession, requireRestAdmin, newToken, strongPassword } from "@/lib/auth";
+import { sendMail, baseUrl } from "@/lib/mail";
+import { go } from "@/lib/flash";
+import { slugify, normPhone, application, getRestaurant, maybeActivate } from "@/lib/restaurant";
+
+const s = (fd: FormData, k: string) => String(fd.get(k) || "").trim();
+
+export async function registerRestaurant(fd: FormData) {
+  const ip = (await headers()).get("x-forwarded-for") ?? "local";
+  const back = "/owner/register";
+  if (!rateOk(`reg:${ip}`, 10, 600)) go(back, "Too many attempts. Please wait a few minutes.", true);
+  const email = s(fd, "email").toLowerCase(), pw = s(fd, "password");
+  const d = { name: s(fd, "name"), owner: s(fd, "owner"), address: s(fd, "address"), phone: s(fd, "phone"), type: s(fd, "type") };
+  if (!d.name || !d.owner || !d.address || !d.type) go(back, "Please fill in all required fields.", true);
+  if (!/^\S+@\S+\.\S+$/.test(email)) go(back, "Please enter a valid email address.", true);
+  if (normPhone(d.phone).length !== 10) go(back, "Please enter a valid 10-digit contact number.", true);
+  if (!strongPassword(pw)) go(back, "Password must be at least 8 characters and include a letter and a number.", true);
+  if (db.prepare("SELECT 1 FROM users WHERE email=?").get(email)) go(back, "We could not create this account. Try signing in instead.", true);
+
+  const tx = db.transaction(() => {
+    const u = db.prepare("INSERT INTO users(email,name,password_hash,role) VALUES(?,?,?,'restaurant_admin')").run(email, d.owner, bcrypt.hashSync(pw, 10));
+    const r = db.prepare("INSERT INTO restaurants(slug,name,owner_name,email,address,phone,phone_norm,type,fssai,gstin) VALUES(?,?,?,?,?,?,?,?,?,?)")
+      .run(slugify(d.name), d.name, d.owner, email, d.address, d.phone, normPhone(d.phone), d.type, s(fd, "fssai") || null, s(fd, "gstin") || null);
+    db.prepare("UPDATE users SET restaurant_id=? WHERE id=?").run(r.lastInsertRowid, u.lastInsertRowid);
+    db.prepare("INSERT INTO applications(restaurant_id,admin_user_id,state) VALUES(?,?,'draft')").run(r.lastInsertRowid, u.lastInsertRowid);
+    db.prepare("INSERT INTO setup_fees(restaurant_id) VALUES(?)").run(r.lastInsertRowid);
+    return { id: Number(u.lastInsertRowid) };
+  });
+  const u = tx();
+  sendMail(email, "Verify your email", `Verify your email: ${baseUrl()}/verify?token=${newToken(u.id, "verify")}`);
+  await startSession({ id: u.id, session_version: 0 });
+  go("/admin", "Account created. Please verify your email using the link we sent.");
+}
+
+export async function resendVerification() {
+  const u = await requireRestAdmin();
+  if (rateOk(`resend:${u.id}`, 3, 600)) sendMail(u.email, "Verify your email", `Verify your email: ${baseUrl()}/verify?token=${newToken(u.id, "verify")}`);
+  go("/admin", "Verification email sent.");
+}
+
+export async function submitApplication() {
+  const u = await requireRestAdmin();
+  if (!u.email_verified) go("/admin", "Please verify your email before submitting.", true);
+  const app = application(u.restaurant_id);
+  if (!app || !["draft", "returned"].includes(app.state)) go("/admin"); // double-click safe
+  db.prepare("UPDATE applications SET state='submitted', updated_at=datetime('now') WHERE id=? AND state IN ('draft','returned')").run(app.id);
+  db.prepare("UPDATE restaurants SET details_reviewed=1 WHERE id=?").run(u.restaurant_id);
+  const r = getRestaurant(u.restaurant_id)!;
+  sendMail(u.email, "Application submitted", `We received your application for ${r.name}. We will review it shortly.`);
+  const sa = db.prepare("SELECT email FROM users WHERE role='super_admin'").get() as { email: string };
+  sendMail(sa.email, "New application", `${r.name} submitted an application.`);
+  log(u.id, "application_submitted", String(app.id));
+  go("/admin", "Application submitted.");
+}
+
+export async function startNewApplication() {
+  const u = await requireRestAdmin();
+  const app = application(u.restaurant_id);
+  if (app?.state !== "rejected") go("/admin");
+  db.prepare("INSERT INTO applications(restaurant_id,admin_user_id,state) VALUES(?,?,'draft')").run(u.restaurant_id, u.id);
+  go("/admin/info", "Update your details, then submit a new application.");
+}
+
+export async function markReviewed() {
+  const u = await requireRestAdmin();
+  db.prepare("UPDATE restaurants SET details_reviewed=1 WHERE id=?").run(u.restaurant_id);
+  maybeActivate(u.restaurant_id);
+  go("/admin");
+}

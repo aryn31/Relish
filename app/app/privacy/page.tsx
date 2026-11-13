@@ -1,0 +1,1 @@
+export default function P() { return <main><h1>Privacy Policy</h1><p className="muted">Content to be supplied by the business (PRD §17.3). The super admin may view an individual order only for support and dispute purposes.</p></main>; }
