@@ -1,6 +1,7 @@
 import { requireRestAdmin } from "@/lib/auth";
 import { db, inr } from "@/lib/db";
 import { addCategory, renameCategory, moveCategory, deleteCategory, saveItem, toggleItem, deleteItem } from "@/app/actions/admin";
+import PageHead from "@/components/PageHead";
 import Flash from "@/components/Flash";
 import Confirm from "@/components/Confirm";
 
@@ -33,12 +34,13 @@ function ItemForm({ item, portions, cats }: { item?: Item; portions: Portion[]; 
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; edit?: string }> }) {
   const sp = await searchParams; const u = await requireRestAdmin(); const rid = u.restaurant_id;
-  const cats = db.prepare("SELECT * FROM categories WHERE restaurant_id=? ORDER BY position,id").all(rid) as { id: number; name: string }[];
-  const items = db.prepare("SELECT * FROM items WHERE restaurant_id=? AND deleted=0 ORDER BY id").all(rid) as Item[];
-  const por = (id: number) => db.prepare("SELECT * FROM portions WHERE item_id=? ORDER BY id").all(id) as Portion[];
+  const cats = await db.prepare("SELECT * FROM categories WHERE restaurant_id=? ORDER BY position,id").all(rid) as { id: number; name: string }[];
+  const items = await db.prepare("SELECT * FROM items WHERE restaurant_id=? AND deleted=0 ORDER BY id").all(rid) as Item[];
+  const allPor = (await db.prepare("SELECT p.* FROM portions p JOIN items i ON i.id=p.item_id WHERE i.restaurant_id=? ORDER BY p.id").all(rid)) as (Portion & { item_id: number })[];
+  const por = (id: number) => allPor.filter((p) => p.item_id === id);
   const edit = sp.edit ? items.find((i) => i.id === Number(sp.edit)) : undefined;
   return (
-    <div><Flash sp={sp} />
+    <div><PageHead title="Menu" sub="Categories, items, portions and prices." /><Flash sp={sp} />
       <h2 style={{ marginTop: 0 }}>Categories</h2>
       <form action={addCategory} className="row"><input className="grow" name="name" placeholder="New category, e.g. Starters" aria-label="Category name" required /><button>Add category</button></form>
       {cats.map((c) => (
@@ -56,7 +58,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ o
       {items.length === 0 ? <p className="muted">No items yet.</p> :
         <table className="t"><tbody>{items.map((i) => (
           <tr key={i.id}>
-            <td><strong>{i.name}</strong><div className="muted">{cats.find((c) => c.id === i.category_id)?.name} · {por(i.id).map((p) => `${p.label ? p.label + " " : ""}${inr(p.price_paise)}${p.available ? "" : " (off)"}`).join(", ")}</div></td>
+            <td style={{ width: 56 }}>{i.image ? <img className="thumb" src={`/api/img/${i.image}`} alt="" /> : <div className="thumb" />}</td><td><strong>{i.name}</strong><div className="muted">{cats.find((c) => c.id === i.category_id)?.name} · {por(i.id).map((p) => `${p.label ? p.label + " " : ""}${inr(p.price_paise)}${p.available ? "" : " (off)"}`).join(", ")}</div></td>
             <td><span className="badge">{i.available ? "Available" : "Unavailable"}</span></td>
             <td className="row">
               <a className="btn alt" href={`/admin/menu?edit=${i.id}`}>Edit</a>

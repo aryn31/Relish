@@ -4,8 +4,8 @@ import Flash from "@/components/Flash";
 import Confirm from "@/components/Confirm";
 export default async function Page({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const rs = db.prepare("SELECT id,name FROM restaurants ORDER BY name").all() as { id: number; name: string }[];
-  const as = db.prepare("SELECT u.*, r.name rname FROM users u JOIN restaurants r ON r.id=u.restaurant_id WHERE u.role='restaurant_admin' ORDER BY r.name,u.id").all() as any[];
+  const rs = await db.prepare("SELECT id,name FROM restaurants ORDER BY name").all() as { id: number; name: string }[];
+  const as = await db.prepare("SELECT u.*, r.name rname FROM users u JOIN restaurants r ON r.id=u.restaurant_id WHERE u.role='restaurant_admin' ORDER BY r.name,u.id").all() as any[];
   return (
     <div><Flash sp={sp} />
       <h2 style={{ marginTop: 0 }}>Add an admin to a restaurant</h2>

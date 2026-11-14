@@ -26,28 +26,32 @@ export default function MenuClient({ restaurantId, slug, name, menu, labels, dis
   return (
     <>
       {menu.cats.length === 0 && <p className="muted">No items yet.</p>}
+      {menu.cats.length > 1 && <nav className="mnav chips">{menu.cats.map((c) => <a key={c.id} className="chip" href={`#cat-${c.id}`}>{c.name}</a>)}</nav>}
       {menu.cats.map((c) => (
-        <section key={c.id}><h2>{c.name}</h2>
+        <section key={c.id} id={`cat-${c.id}`} className="cathead"><h2>{c.name}</h2>
+          <div className="mgrid">
           {c.items.map((i) => {
             const sel = i.portions.find((p) => p.id === (pick[i.id] ?? i.portions.find((x) => x.available)?.id)); const ok = i.available && i.portions.some((p) => p.available);
+            const multi = i.portions.length > 1 || !!i.portions[0]?.label;
             return (
-              <div className="menu-item" key={i.id}>
-                {i.image && <img src={`/api/img/${i.image}`} alt="" />}
-                <div style={{ flex: 1 }}>
-                  <strong>{i.veg !== null && <span title={i.veg ? labels.veg : labels.nonveg}><span className={`dot ${i.veg ? "v" : "n"}`} />{i.veg ? labels.veg : labels.nonveg} · </span>}{i.name}</strong>
-                  {i.description && <div className="muted">{i.description}</div>}
-                  <div className="row" style={{ marginTop: 6 }}>
-                    {i.portions.length > 1 || i.portions[0]?.label ? (
-                      <select style={{ width: "auto" }} aria-label="Portion" value={sel?.id} onChange={(e) => setPick({ ...pick, [i.id]: Number(e.target.value) })}>
-                        {i.portions.map((p) => <option key={p.id} value={p.id} disabled={!p.available}>{p.label} — {inr(p.price)}{p.available ? "" : ` (${labels.unavailable})`}</option>)}
-                      </select>) : <span>{inr(i.portions[0].price)}</span>}
-                    {ok ? <button disabled={disabled || !sel?.available} onClick={() => add(i)}>{labels.add_to_cart}</button> : <span className="badge muted">{labels.unavailable}</span>}
+              <div className="mcard" key={i.id} style={ok ? undefined : { opacity: .6 }}>
+                <div className="ph">{i.image && <img src={`/api/img/${i.image}`} alt={i.name} loading="lazy" />}
+                  {i.veg !== null && <span className="vt"><span className={`dot ${i.veg ? "v" : "n"}`} />{i.veg ? labels.veg : labels.nonveg}</span>}</div>
+                <div className="info">
+                  <h3>{i.name}</h3>
+                  {i.description && <p className="d">{i.description}</p>}
+                  {multi && <select aria-label="Portion" value={sel?.id} onChange={(e) => setPick({ ...pick, [i.id]: Number(e.target.value) })}>
+                    {i.portions.map((p) => <option key={p.id} value={p.id} disabled={!p.available}>{p.label} — {inr(p.price)}{p.available ? "" : ` (${labels.unavailable})`}</option>)}</select>}
+                  <div className="foot">
+                    <span className="price">{inr((sel ?? i.portions[0]).price)}</span>
+                    {ok ? <button className="addbtn" aria-label={`${labels.add_to_cart} ${i.name}`} disabled={disabled || !sel?.available} onClick={() => add(i)}>+</button> : <span className="badge cancelled">{labels.unavailable}</span>}
                   </div>
                 </div>
               </div>);
           })}
+          </div>
         </section>))}
-      {!disabled && count > 0 && <div className="cartbar"><span>{count} · <strong>{inr(total)}</strong></span><Link className="btn" href={`/r/${slug}/checkout`}>{labels.checkout}</Link></div>}
+      {!disabled && count > 0 && <div className="cartbar"><span>{count} item{count > 1 ? "s" : ""} · <strong>{inr(total)}</strong></span><Link className="btn" href={`/r/${slug}/checkout`}>{labels.checkout} →</Link></div>}
     </>
   );
 }

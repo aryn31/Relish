@@ -10,10 +10,10 @@ import Confirm from "@/components/Confirm";
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string; new?: string }> }) {
   const { id } = await params; const sp = await searchParams; const u = await requireUser(`/orders/${id}`); const { t } = await tr();
   // ROLE-04/AUTH-07: customers only see their own orders.
-  const o = db.prepare("SELECT o.*, r.name rname, r.slug, r.state rstate, r.upi_qr FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE o.public_id=? AND o.customer_id=?").get(id, u.id) as any;
+  const o = await db.prepare("SELECT o.*, r.name rname, r.slug, r.state rstate, r.upi_qr FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE o.public_id=? AND o.customer_id=?").get(id, u.id) as any;
   if (!o) return <main><h1>Order not found</h1><Link href="/orders">{t("my_orders")}</Link></main>;
-  const lines = db.prepare("SELECT * FROM order_lines WHERE order_id=?").all(o.id) as any[];
-  const cr = db.prepare("SELECT * FROM cancel_requests WHERE order_id=? ORDER BY id DESC LIMIT 1").get(o.id) as { status: string; reason: string } | undefined;
+  const lines = await db.prepare("SELECT * FROM order_lines WHERE order_id=?").all(o.id) as any[];
+  const cr = await db.prepare("SELECT * FROM cancel_requests WHERE order_id=? ORDER BY id DESC LIMIT 1").get(o.id) as { status: string; reason: string } | undefined;
   const payable = o.payment_status === "pending" && o.status !== "cancelled";
   const pid = <input type="hidden" name="pid" value={id} />;
   return (
@@ -22,6 +22,14 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <h1>{o.rname} · {t("order")} #{o.number}</h1>
       <div className="row"><span className={`badge ${o.status}`}>{t(o.status)}</span><span className={`badge ${o.payment_status}`}>{o.payment_status === "paid" ? t("paid") : t("payment_pending")}</span><span>{t("table")} {o.table_name}</span><span className="muted">{fmtDate(o.created_at)}</span></div>
       {o.prep_minutes != null && o.status === "pending" && <p>{t("prep_time")}: <strong>{o.prep_minutes} {t("minutes")}</strong></p>}
+      <div className="card" style={{ margin: "14px 0" }}>
+        <ul className="tl">
+          <li className="done"><span className="pt">✓</span><strong>Order placed</strong><div className="muted">{fmtDate(o.created_at)}</div></li>
+          {o.status === "cancelled" ? <li className="bad"><span className="pt">✕</span><strong>{t("cancelled")}</strong></li> : <>
+            <li className={o.status === "completed" ? "done" : "now"}><span className="pt">{o.status === "completed" ? "✓" : "●"}</span><strong>{o.status === "completed" ? "Prepared & served" : "Being prepared"}</strong>
+              {o.status === "pending" && <div className="muted">{o.prep_minutes != null ? `Estimated ${o.prep_minutes} ${t("minutes")}` : "The restaurant will set an estimated time"} · {t("table")} {o.table_name}</div>}</li>
+            <li className={o.status === "completed" ? "done" : ""}><span className="pt">{o.status === "completed" ? "✓" : ""}</span><strong>{t("completed")}</strong></li></>}
+        </ul></div>
       <ul>{lines.map((l) => <li key={l.id}>{l.qty} × {l.item_name}{l.portion_name ? ` (${l.portion_name})` : ""} — {inr(l.line_paise)}</li>)}</ul>
       <h3>{t("total")}: {inr(o.total_paise)}</h3>
       {o.status === "cancelled" && o.payment_status === "paid" && <div className="msg">{t("cancelled_paid_note")}</div>}

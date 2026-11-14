@@ -2,52 +2,69 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { tr } from "@/lib/i18n";
 import type { Restaurant } from "@/lib/restaurant";
+import Icon from "@/components/Icon";
 
 const PAGE = 12;
+type Row = Restaurant & { cover: string | null };
 export default async function Home({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; p?: string }> }) {
   const { q = "", type = "", p = "1" } = await searchParams; const { t } = await tr();
   const page = Math.max(1, Number(p) || 1);
-  const where = ["state='active'"]; const args: (string | number)[] = [];
-  if (q) { where.push("name LIKE ?"); args.push(`%${q}%`); }
-  if (type) { where.push("type=?"); args.push(type); }
-  const list = db.prepare(`SELECT * FROM restaurants WHERE ${where.join(" AND ")} ORDER BY name LIMIT ? OFFSET ?`).all(...args, PAGE + 1, (page - 1) * PAGE) as Restaurant[];
-  const types = (db.prepare("SELECT DISTINCT type FROM restaurants WHERE state='active' ORDER BY type").all() as { type: string }[]).map((x) => x.type);
-  const qs = (n: number) => `/?${new URLSearchParams({ ...(q && { q }), ...(type && { type }), p: String(n) })}#restaurants`;
+  const where = ["r.state='active'"]; const args: (string | number)[] = [];
+  if (q) { where.push("r.name ILIKE ?"); args.push(`%${q}%`); }
+  if (type) { where.push("r.type=?"); args.push(type); }
+  const list = (await db.prepare(`SELECT r.*, (SELECT image FROM items WHERE restaurant_id=r.id AND deleted=0 AND image IS NOT NULL ORDER BY id LIMIT 1) cover FROM restaurants r WHERE ${where.join(" AND ")} ORDER BY r.name LIMIT ? OFFSET ?`).all(...args, PAGE + 1, (page - 1) * PAGE)) as Row[];
+  const types = ((await db.prepare("SELECT DISTINCT type FROM restaurants WHERE state='active' ORDER BY type").all()) as { type: string }[]).map((x) => x.type);
+  const collage = ((await db.prepare("SELECT DISTINCT ON (i.restaurant_id) i.image FROM items i JOIN restaurants r ON r.id=i.restaurant_id WHERE r.state='active' AND i.image IS NOT NULL AND i.deleted=0 ORDER BY i.restaurant_id, i.id DESC LIMIT 3").all()) as { image: string }[]).map((x) => x.image);
+  const n = (await db.prepare("SELECT (SELECT COUNT(*) FROM restaurants WHERE state='active') r, (SELECT COUNT(*) FROM items i JOIN restaurants r ON r.id=i.restaurant_id WHERE r.state='active' AND i.deleted=0) d, (SELECT COUNT(*) FROM orders) o").get()) as { r: number; d: number; o: number };
+  const chipHref = (ty: string) => `/?${new URLSearchParams({ ...(q && { q }), ...(ty && { type: ty }) })}#restaurants`;
+  const qs = (k: number) => `/?${new URLSearchParams({ ...(q && { q }), ...(type && { type }), p: String(k) })}#restaurants`;
+  const cuisines = ["Biryani", "Paneer Tikka", "Masala Chai", "Pizza", "Butter Chicken", "Cappuccino", "Gulab Jamun", "Burgers", "Dal Makhani", "Pasta", "Kulfi", "Naan"];
   return (
     <main>
       <section className="hero">
-        <h1>{t("hero_c")}</h1>
-        <p>{t("hero_o")}</p>
-        <form className="search" action="/#restaurants"><input name="q" defaultValue={q} placeholder={t("search")} aria-label={t("search")} /><button>{t("go")}</button></form>
-        <div className="feats"><div><span>🍽</span>Dine in</div><div><span>▣</span>Scan QR</div><div><span>🛒</span>Order online</div><div><span>✓</span>Easy &amp; simple</div></div>
+        <div>
+          <span className="eyebrow"><Icon name="spark" size={14} /> Dine-in ordering, reimagined</span>
+          <h1>Discover great food. <em>Order with ease.</em></h1>
+          <p className="lead">Scan the QR at your table, browse the menu with photos, order and pay — no waiting for the waiter.</p>
+          <form className="search" action="/#restaurants"><input name="q" defaultValue={q} placeholder={t("search")} aria-label={t("search")} /><button><Icon name="search" size={16} />{t("go")}</button></form>
+          <div className="stats"><div><b>{n.r}</b><span>Restaurants</span></div><div><b>{n.d}+</b><span>Dishes</span></div><div><b>{n.o}+</b><span>Orders served</span></div></div>
+        </div>
+        {collage.length >= 3 && <div className="collage" aria-hidden="true">
+          {collage.map((c) => <img key={c} src={`/api/img/${c}`} alt="" />)}
+          <div className="float-chip a"><i><Icon name="qr" size={16} /></i>Scan &amp; order</div>
+          <div className="float-chip b"><i><Icon name="check" size={16} /></i>Table 5 · Confirmed</div>
+        </div>}
       </section>
+
+      <div className="marquee" aria-hidden="true"><div>{[...cuisines, ...cuisines].map((c, i) => <span key={i}>{c}</span>)}</div></div>
 
       <section id="restaurants">
-        <h2>{t("find")}</h2>
-        <form className="row" action="/">
-          <input className="grow" name="q" defaultValue={q} placeholder={t("search")} aria-label={t("search")} />
-          <select name="type" defaultValue={type} style={{ width: "auto" }} aria-label="Type"><option value="">{t("all_types")}</option>{types.map((x) => <option key={x}>{x}</option>)}</select>
-          <button>{t("go")}</button>
-        </form>
+        <div className="sec-head"><div><span className="eyebrow">Explore</span><h2>Find your next meal</h2></div>
+          <form className="row" action="/#restaurants" style={{ flexWrap: "nowrap" }}>{type && <input type="hidden" name="type" value={type} />}<input name="q" defaultValue={q} placeholder={t("search")} aria-label={t("search")} style={{ minWidth: 230 }} /><button className="alt"><Icon name="search" size={16} /></button></form></div>
+        <div className="chips"><a className={`chip ${type ? "" : "on"}`} href={chipHref("")}>{t("all_types")}</a>{types.map((x) => <a key={x} className={`chip ${type === x ? "on" : ""}`} href={chipHref(x)}>{x}</a>)}</div>
         {list.length === 0 ? <p className="muted">{t("none_found")}</p> :
-          <div className="grid" style={{ marginTop: 14 }}>
+          <div className="rgrid" style={{ marginTop: 10 }}>
             {list.slice(0, PAGE).map((r) => (
-              <div className="card" key={r.id}>
-                <h3 style={{ marginTop: 0 }}>{r.name}</h3>
-                <div className="muted">{r.type} · {r.address}</div>
-                {r.description && <p>{r.description.slice(0, 120)}</p>}
-                <Link className="btn" href={`/r/${r.slug}`}>{t("view_menu")}</Link>
-              </div>))}
+              <Link href={`/r/${r.slug}`} className="rcard" key={r.id}>
+                {r.cover && <img src={`/api/img/${r.cover}`} alt="" />}
+                <span className="tag">{r.type}</span><span className="go"><Icon name="up" size={20} /></span>
+                <div className="body"><h3>{r.name}</h3><div className="loc"><Icon name="pin" size={14} />{r.address}</div>{r.description && <p className="desc">{r.description}</p>}</div>
+              </Link>))}
           </div>}
-        <p className="row">{page > 1 && <Link href={qs(page - 1)}>← {t("prev")}</Link>}{list.length > PAGE && <Link href={qs(page + 1)}>{t("next")} →</Link>}</p>
+        <p className="row" style={{ marginTop: 18 }}>{page > 1 && <Link className="btn alt" href={qs(page - 1)}>← {t("prev")}</Link>}{list.length > PAGE && <Link className="btn alt" href={qs(page + 1)}>{t("next")} →</Link>}</p>
       </section>
 
-      <section className="grid" style={{ marginTop: 40 }}>
-        <div><h2>{t("how_c")}</h2><ol><li>{t("how_c1")}</li><li>{t("how_c2")}</li><li>{t("how_c3")}</li></ol></div>
-        <div><h2>{t("benefits")}</h2><ul><li>{t("b1")}</li><li>{t("b2")}</li><li>{t("b3")}</li><li>{t("b4")}</li><li>{t("b5")}</li><li>{t("b6")}</li></ul></div>
-        <div><h2>{t("how_o")}</h2><ol><li>{t("o1")}</li><li>{t("o2")}</li><li>{t("o3")}</li><li>{t("o4")}</li><li>{t("o5")}</li><li>{t("o6")}</li></ol></div>
+      <div className="sec-head"><div><span className="eyebrow">How it works</span><h2>From table to plate in three taps</h2></div></div>
+      <section className="bento">
+        <div className="tile t1"><h3>{t("how_c")}</h3>
+          {[t("how_c1"), t("how_c2"), t("how_c3")].map((s, i) => <div className="step" key={i}><b>{i + 1}</b><span>{s}</span></div>)}</div>
+        <div className="tile t2"><h3>{t("benefits")}</h3>
+          {[t("b1"), t("b2"), t("b3"), t("b4"), t("b5"), t("b6")].map((s, i) => <div className="benefit" key={i}><i><Icon name="check" size={18} /></i>{s}</div>)}</div>
+        <div className="tile t3"><h3>{t("how_o")}</h3>
+          <div className="steps6">{[t("o1"), t("o2"), t("o3"), t("o4"), t("o5"), t("o6")].map((s, i) => <div className="step" key={i}><b>{i + 1}</b><span>{s}</span></div>)}</div></div>
       </section>
-      <p style={{ textAlign: "center", marginTop: 32 }}><Link className="btn" href="/owner/register">{t("register_cta")}</Link></p>
+
+      <section className="cta"><h2>{t("hero_o")}</h2><p style={{ opacity: .85, margin: "0 0 26px", fontSize: "1.05rem" }}>{t("o6")}</p><Link className="btn hot lg" href="/owner/register">{t("register_cta")} <Icon name="right" size={18} /></Link></section>
     </main>
   );
 }

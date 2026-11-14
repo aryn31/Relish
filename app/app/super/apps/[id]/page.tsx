@@ -9,12 +9,12 @@ import Confirm from "@/components/Confirm";
 
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string; preview?: string }> }) {
   const { id } = await params; const sp = await searchParams;
-  const a = db.prepare("SELECT * FROM applications WHERE id=?").get(Number(id)) as { id: number; restaurant_id: number; state: string; reason: string | null; updated_at: string } | undefined;
+  const a = await db.prepare("SELECT * FROM applications WHERE id=?").get(Number(id)) as { id: number; restaurant_id: number; state: string; reason: string | null; updated_at: string } | undefined;
   if (!a) return <p>Not found.</p>;
-  const r = getRestaurant(a.restaurant_id)!, f = fee(r.id)!;
-  const dups = db.prepare("SELECT id,name,state FROM restaurants WHERE id!=? AND (phone_norm=? OR (lower(name)=lower(?) AND lower(address)=lower(?)))").all(r.id, (r as any).phone_norm ?? "", r.name, r.address) as any[];
+  const r = (await getRestaurant(a.restaurant_id))!, f = (await fee(r.id))!;
+  const dups = await db.prepare("SELECT id,name,state FROM restaurants WHERE id!=? AND (phone_norm=? OR (lower(name)=lower(?) AND lower(address)=lower(?)))").all(r.id, (r as any).phone_norm ?? "", r.name, r.address) as any[];
   const hidden = <input type="hidden" name="app_id" value={a.id} />;
-  const owner = db.prepare("SELECT name,email,email_verified FROM users WHERE restaurant_id=? AND role='restaurant_admin' ORDER BY id LIMIT 1").get(r.id) as { name: string; email: string; email_verified: number };
+  const owner = await db.prepare("SELECT name,email,email_verified FROM users WHERE restaurant_id=? AND role='restaurant_admin' ORDER BY id LIMIT 1").get(r.id) as { name: string; email: string; email_verified: number };
   return (
     <div className="stack" style={{ maxWidth: 720 }}><Flash sp={sp} />
       <h1 style={{ marginBottom: 0 }}>{r.name}</h1><div className="muted">Application #{a.id} · {a.state} · {fmtDate(a.updated_at)}</div>

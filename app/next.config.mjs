@@ -1,1 +1,1 @@
-export default { serverExternalPackages: ["better-sqlite3"], experimental: { serverActions: { bodySizeLimit: "6mb" } } };
+export default { experimental: { serverActions: { bodySizeLimit: "6mb" } } };

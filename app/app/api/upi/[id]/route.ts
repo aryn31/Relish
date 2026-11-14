@@ -5,7 +5,7 @@ import { getUser } from "@/lib/auth";
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params; const u = await getUser();
   if (!u) return new Response("Forbidden", { status: 403 });
-  const o = db.prepare("SELECT o.customer_id, o.restaurant_id, r.upi_qr FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE o.public_id=?").get(id) as { customer_id: number; restaurant_id: number; upi_qr: string | null } | undefined;
+  const o = await db.prepare("SELECT o.customer_id, o.restaurant_id, r.upi_qr FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE o.public_id=?").get(id) as { customer_id: number; restaurant_id: number; upi_qr: string | null } | undefined;
   if (!o || !o.upi_qr) return new Response("Not found", { status: 404 });
   const allowed = u.id === o.customer_id || u.role === "super_admin" || (u.role === "restaurant_admin" && u.restaurant_id === o.restaurant_id);
   if (!allowed) return new Response("Forbidden", { status: 403 });

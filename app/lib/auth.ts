@@ -18,7 +18,7 @@ export async function getUser(): Promise<User | null> {
   if (!c) return null;
   try {
     const { payload } = await jwtVerify(c, secret());
-    const u = db.prepare("SELECT id,email,name,role,restaurant_id,email_verified,disabled,lang,session_version FROM users WHERE id=?").get(payload.uid) as User | undefined;
+    const u = await db.prepare("SELECT id,email,name,role,restaurant_id,email_verified,disabled,lang,session_version FROM users WHERE id=?").get(payload.uid) as User | undefined;
     if (!u || u.disabled || u.session_version !== payload.v) return null;
     return u;
   } catch { return null; }
@@ -40,15 +40,15 @@ export async function requireRestAdmin(): Promise<User & { restaurant_id: number
   return u as User & { restaurant_id: number };
 }
 
-export function newToken(userId: number, kind: "verify" | "reset", hours = 24) {
+export async function newToken(userId: number, kind: "verify" | "reset", hours = 24) {
   const token = crypto.randomBytes(24).toString("hex");
-  db.prepare("INSERT INTO tokens VALUES(?,?,?,datetime('now',?))").run(token, userId, kind, `+${hours} hours`);
+  await db.prepare("INSERT INTO tokens VALUES(?,?,?,datetime('now',?))").run(token, userId, kind, `+${hours} hours`);
   return token;
 }
-export function useToken(token: string, kind: string): number | null {
-  const r = db.prepare("SELECT user_id FROM tokens WHERE token=? AND kind=? AND expires_at>datetime('now')").get(token, kind) as { user_id: number } | undefined;
+export async function useToken(token: string, kind: string): Promise<number | null> {
+  const r = await db.prepare("SELECT user_id FROM tokens WHERE token=? AND kind=? AND expires_at>datetime('now')").get(token, kind) as { user_id: number } | undefined;
   if (!r) return null;
-  db.prepare("DELETE FROM tokens WHERE token=?").run(token);
+  await db.prepare("DELETE FROM tokens WHERE token=?").run(token);
   return r.user_id;
 }
 

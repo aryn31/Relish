@@ -9,7 +9,7 @@ import Confirm from "@/components/Confirm";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const sp = await searchParams; const u = await requireUser("/orders"); const { t } = await tr();
-  const orders = db.prepare("SELECT o.*, r.name rname FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE o.customer_id=? ORDER BY o.id DESC LIMIT 100").all(u.id) as any[];
+  const orders = await db.prepare("SELECT o.*, r.name rname FROM orders o JOIN restaurants r ON r.id=o.restaurant_id WHERE o.customer_id=? ORDER BY o.id DESC LIMIT 100").all(u.id) as any[];
   return (
     <main style={{ maxWidth: 720 }}><h1>{t("my_orders")}</h1><Flash sp={sp} /><AutoRefresh seconds={25} />
       {orders.length === 0 && <p className="muted">No orders yet. <Link href="/#restaurants">{t("find")}</Link></p>}

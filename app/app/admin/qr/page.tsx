@@ -3,7 +3,7 @@ import { requireRestAdmin } from "@/lib/auth";
 import { getRestaurant } from "@/lib/restaurant";
 import { baseUrl } from "@/lib/mail";
 export default async function Page() {
-  const u = await requireRestAdmin(); const r = getRestaurant(u.restaurant_id)!;
+  const u = await requireRestAdmin(); const r = (await getRestaurant(u.restaurant_id))!;
   const url = `${baseUrl()}/r/${r.slug}`; const svg = await QRCode.toDataURL(url, { width: 360, margin: 2 });
   return (
     <div className="stack" style={{ maxWidth: 420 }}>

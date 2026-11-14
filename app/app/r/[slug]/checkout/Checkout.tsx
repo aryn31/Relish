@@ -12,7 +12,7 @@ export default function Checkout({ restaurantId, slug, name, signedIn, staff, la
   const [cart, setCart] = useState<Cart | null | undefined>(undefined);
   const [chk, setChk] = useState<CheckResult | null>(null);
   const [table, setTable] = useState(0); const [method, setMethod] = useState<"upi" | "cash">("upi");
-  const [ack, setAck] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState(1); const [ack, setAck] = useState(false); const [err, setErr] = useState(""); const [busy, setBusy] = useState(false);
 
   async function revalidate(c: Cart) {
     const res = await checkCart(restaurantId, c.lines.map((l) => ({ portionId: l.portionId, qty: l.qty })));
@@ -54,6 +54,7 @@ export default function Checkout({ restaurantId, slug, name, signedIn, staff, la
   return (
     <main style={{ maxWidth: 640 }}>
       <h1>{L.checkout} — {name}</h1>
+      <div className="stepper">{[[1, L.table], [2, L.payment], [3, "Confirm"]].map(([n, l], i) => <span key={n as number} style={{ display: "contents" }}>{i > 0 && <hr />}<span className={`s ${step >= (n as number) ? "on" : ""}`}><b>{n}</b>{l}</span></span>)}</div>
       {!chk.open && <div className="msg err">{L.closed_cart}</div>}
       {gone.length > 0 && <div className="msg err">{L.item_gone}</div>}
       {changed.length > 0 && !ack && <div className="msg err">{L.price_changed} <button className="alt" onClick={accept}>{L.confirm_prices}</button></div>}
@@ -68,15 +69,23 @@ export default function Checkout({ restaurantId, slug, name, signedIn, staff, la
       </tbody></table>
       <h3>{L.total}: {inr(chk.total)}</h3>
 
-      <label htmlFor="table">{L.choose_table}</label>
-      <select id="table" value={table} onChange={(e) => setTable(Number(e.target.value))}>
-        <option value={0}>—</option>{chk.tables.map((t) => <option key={t.id} value={t.id}>{L.table} {t.name}</option>)}</select>
+      {step === 1 && <>
+        <label htmlFor="table">{L.choose_table}</label>
+        <select id="table" value={table} onChange={(e) => setTable(Number(e.target.value))}>
+          <option value={0}>—</option>{chk.tables.map((t) => <option key={t.id} value={t.id}>{L.table} {t.name}</option>)}</select>
+        <p style={{ marginTop: 18 }}><button disabled={!chk.open || gone.length > 0 || (changed.length > 0 && !ack) || table === 0 || staff} onClick={() => setStep(2)}>{L.next} →</button></p></>}
 
-      <label>{L.payment}</label>
-      <label style={{ fontWeight: 400 }}><input type="radio" checked={method === "upi"} onChange={() => setMethod("upi")} /> {L.pay_upi}</label>
-      <label style={{ fontWeight: 400 }}><input type="radio" checked={method === "cash"} onChange={() => setMethod("cash")} /> {L.pay_cash}</label>
+      {step === 2 && <>
+        <div className="card"><div className="row"><span>{L.table} <strong>{chk.tables.find((t) => t.id === table)?.name}</strong></span><button className="link" onClick={() => setStep(1)}>Change</button></div></div>
+        <label>{L.payment}</label>
+        <label style={{ fontWeight: 400 }}><input type="radio" checked={method === "upi"} onChange={() => setMethod("upi")} /> {L.pay_upi}</label>
+        <label style={{ fontWeight: 400 }}><input type="radio" checked={method === "cash"} onChange={() => setMethod("cash")} /> {L.pay_cash}</label>
+        <p className="row" style={{ marginTop: 18 }}><button className="alt" onClick={() => setStep(1)}>← {L.back}</button><button onClick={() => setStep(3)}>{L.next} →</button></p></>}
 
-      <p style={{ marginTop: 18 }}><button disabled={!canOrder || staff} onClick={submit}>{signedIn ? `${L.place_order} · ${inr(chk.total)}` : L.signin}</button></p>
+      {step === 3 && <>
+        <div className="card stack"><div>{L.table}: <strong>{chk.tables.find((t) => t.id === table)?.name}</strong></div><div>{L.payment}: <strong>{method === "upi" ? L.pay_upi : L.pay_cash}</strong></div><div>{L.total}: <strong>{inr(chk.total)}</strong></div></div>
+        <p className="row" style={{ marginTop: 18 }}><button className="alt" onClick={() => setStep(2)}>← {L.back}</button><button disabled={!canOrder || staff} onClick={submit}>{signedIn ? `${L.place_order} · ${inr(chk.total)}` : L.signin}</button></p></>}
+
       <p><Link href={`/r/${slug}`}>← {L.back}</Link></p>
     </main>
   );

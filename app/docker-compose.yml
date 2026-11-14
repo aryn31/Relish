@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: relish-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: relish
+      POSTGRES_PASSWORD: relish
+      POSTGRES_DB: relish
+    ports:
+      - "5433:5432"
+    volumes:
+      - relish-data:/var/lib/postgresql/data
+volumes:
+  relish-data:

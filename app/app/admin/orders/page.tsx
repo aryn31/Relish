@@ -3,6 +3,7 @@ import { requireRestAdmin } from "@/lib/auth";
 import { db, inr, fmtDate } from "@/lib/db";
 import { getRestaurant } from "@/lib/restaurant";
 import { setPrep, completeOrder, confirmPayment, decideCancel, reassignTable } from "@/app/actions/admin";
+import PageHead from "@/components/PageHead";
 import Flash from "@/components/Flash";
 import Confirm from "@/components/Confirm";
 import AutoRefresh from "@/components/AutoRefresh";
@@ -12,7 +13,7 @@ const PAGE = 20;
 type O = { id: number; number: number; table_name: string; payment_method: string; payment_status: string; claimed_paid: number; status: string; prep_minutes: number | null; total_paise: number; created_at: string };
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
-  const sp = await searchParams; const u = await requireRestAdmin(); const r = getRestaurant(u.restaurant_id)!;
+  const sp = await searchParams; const u = await requireRestAdmin(); const r = (await getRestaurant(u.restaurant_id))!;
   if (r.state === "pending") redirect("/admin");
   const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
   const hasFilter = "status" in sp || "pay" in sp || "date" in sp;
@@ -21,15 +22,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const where = ["restaurant_id=?"], args: (string | number)[] = [r.id];
   if (status) { where.push("status=?"); args.push(status); }
   if (pay) { where.push("payment_status=?"); args.push(pay); }
-  if (date) { where.push("date(created_at,'+5 hours','+30 minutes')=?"); args.push(date); }
-  const orders = db.prepare(`SELECT * FROM orders WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...args, PAGE + 1, (page - 1) * PAGE) as O[];
-  const pendingCount = (db.prepare("SELECT COUNT(*) c FROM orders WHERE restaurant_id=? AND status='pending'").get(r.id) as { c: number }).c;
-  const tables = db.prepare("SELECT id,name FROM tables_ WHERE restaurant_id=? AND active=1").all(r.id) as { id: number; name: string }[];
+  if (date) { where.push("(created_at AT TIME ZONE 'Asia/Kolkata')::date=?::date"); args.push(date); }
+  const orders = await db.prepare(`SELECT * FROM orders WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...args, PAGE + 1, (page - 1) * PAGE) as O[];
+  const pendingCount = (await db.prepare("SELECT COUNT(*) c FROM orders WHERE restaurant_id=? AND status='pending'").get(r.id) as { c: number }).c;
+  const tables = await db.prepare("SELECT id,name FROM tables_ WHERE restaurant_id=? AND active=1").all(r.id) as { id: number; name: string }[];
+  const det = new Map<number, { lines: unknown[]; cr: unknown }>();
+  for (const o of orders.slice(0, PAGE)) det.set(o.id, { lines: await db.prepare("SELECT * FROM order_lines WHERE order_id=?").all(o.id), cr: await db.prepare("SELECT * FROM cancel_requests WHERE order_id=? ORDER BY id DESC LIMIT 1").get(o.id) });
   const self = "/admin/orders?" + new URLSearchParams(Object.entries(sp).filter(([k]) => k !== "ok" && k !== "err")).toString();
   const qs = (n: number) => `/admin/orders?${new URLSearchParams({ status, pay, date, p: String(n) })}`;
 
   return (
-    <div><Flash sp={sp} /><AutoRefresh seconds={25} count={pendingCount} sound />
+    <div><PageHead title="Orders" sub="Live orders refresh automatically." /><Flash sp={sp} /><AutoRefresh seconds={25} count={pendingCount} sound />
       {r.state === "inactive" && <div className="msg">Restaurant is inactive. You can complete orders and answer cancellation requests, but payments cannot be confirmed.</div>}
       <form className="row" action="/admin/orders">
         <select name="status" defaultValue={status} aria-label="Order status"><option value="">All statuses</option><option value="pending">Pending</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option></select>
@@ -41,10 +44,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       {orders.length === 0 && <p className="muted">No orders match.</p>}
       <div className="stack">
         {orders.slice(0, PAGE).map((o) => {
-          const lines = db.prepare("SELECT * FROM order_lines WHERE order_id=?").all(o.id) as { item_name: string; portion_name: string; qty: number; line_paise: number }[];
-          const cr = db.prepare("SELECT * FROM cancel_requests WHERE order_id=? ORDER BY id DESC LIMIT 1").get(o.id) as { status: string; reason: string } | undefined;
+          const lines = det.get(o.id)!.lines as { item_name: string; portion_name: string; qty: number; line_paise: number }[];
+          const cr = det.get(o.id)!.cr as { status: string; reason: string } | undefined;
           return (
-            <div className="card" key={o.id}>
+            <div className={`card ocard ${o.status}`} key={o.id}>
               <div className="row"><strong>#{o.number}</strong><span>Table {o.table_name}</span><span className={`badge ${o.status}`}>{o.status}</span>
                 <span className={`badge ${o.payment_status}`}>{o.payment_status === "paid" ? "Paid" : "Payment pending"}</span>
                 {o.claimed_paid && o.payment_status === "pending" && o.status !== "cancelled" ? <span className="badge ok">Customer says paid</span> : null}

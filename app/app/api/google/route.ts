@@ -28,17 +28,17 @@ export async function GET(req: NextRequest) {
   const info = await (await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { authorization: `Bearer ${tok.access_token}` } })).json();
   if (!info.email || !info.email_verified) return new NextResponse("Google email not verified", { status: 400 });
   const email = String(info.email).toLowerCase();
-  let u = db.prepare("SELECT * FROM users WHERE email=?").get(email) as any;
+  let u = await db.prepare("SELECT * FROM users WHERE email=?").get(email) as any;
   if (u && u.role !== "customer") return new NextResponse("This email belongs to a restaurant/admin account. Use password sign-in.", { status: 400 });
   if (!u) {
-    const r = db.prepare("INSERT INTO users(email,name,role,email_verified,google_id) VALUES(?,?,'customer',1,?)").run(email, info.name || email, info.sub);
-    u = db.prepare("SELECT * FROM users WHERE id=?").get(r.lastInsertRowid);
+    const r = await db.prepare("INSERT INTO users(email,name,role,email_verified,google_id) VALUES(?,?,'customer',1,?)").run(email, info.name || email, info.sub);
+    u = await db.prepare("SELECT * FROM users WHERE id=?").get(r.lastInsertRowid);
   } else if (!u.email_verified && u.password_hash) {
     // Unverified password account with same email: drop its password so a squatter cannot take over the Google-verified owner (AUTH-04/06).
-    db.prepare("UPDATE users SET password_hash=NULL, email_verified=1, google_id=?, session_version=session_version+1 WHERE id=?").run(info.sub, u.id);
-    u = db.prepare("SELECT * FROM users WHERE id=?").get(u.id);
+    await db.prepare("UPDATE users SET password_hash=NULL, email_verified=1, google_id=?, session_version=session_version+1 WHERE id=?").run(info.sub, u.id);
+    u = await db.prepare("SELECT * FROM users WHERE id=?").get(u.id);
   } else if (!u.google_id) {
-    db.prepare("UPDATE users SET google_id=?, email_verified=1 WHERE id=?").run(info.sub, u.id);
+    await db.prepare("UPDATE users SET google_id=?, email_verified=1 WHERE id=?").run(info.sub, u.id);
   }
   await startSession(u);
   jar.delete("oauth");

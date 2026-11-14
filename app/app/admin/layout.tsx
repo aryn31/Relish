@@ -3,7 +3,7 @@ import { requireRestAdmin } from "@/lib/auth";
 import { getRestaurant, application } from "@/lib/restaurant";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const u = await requireRestAdmin(); const r = getRestaurant(u.restaurant_id)!; const app = application(r.id);
+  const u = await requireRestAdmin(); const r = (await getRestaurant(u.restaurant_id))!; const app = await application(r.id);
   const approved = app?.state === "approved";
   const tabs = r.state === "pending"
     ? [["/admin", "Setup"], ...(approved ? [["/admin/menu", "Menu"], ["/admin/tables", "Tables"], ["/admin/payments", "UPI QR"], ["/admin/info", "Restaurant info"]] : [["/admin/info", "Restaurant info"]]), ["/admin/preview", "Preview"]]

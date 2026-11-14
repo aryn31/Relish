@@ -1,31 +1,40 @@
 import Link from "next/link";
 import { requireRestAdmin } from "@/lib/auth";
-import { db, inr } from "@/lib/db";
+import { db, inr, fmtDate } from "@/lib/db";
 import { getRestaurant, application, fee, checklist } from "@/lib/restaurant";
 import { resendVerification, submitApplication, startNewApplication, markReviewed } from "@/app/actions/owner";
 import Flash from "@/components/Flash";
+import Icon, { type IconName } from "@/components/Icon";
+import PageHead from "@/components/PageHead";
 import AutoRefresh from "@/components/AutoRefresh";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const sp = await searchParams; const u = await requireRestAdmin(); const r = getRestaurant(u.restaurant_id)!;
-  const app = application(r.id)!, f = fee(r.id)!, cl = checklist(r);
+  const sp = await searchParams; const u = await requireRestAdmin(); const r = (await getRestaurant(u.restaurant_id))!;
+  const app = (await application(r.id))!, f = (await fee(r.id))!, cl = await checklist(r);
 
   if (r.state !== "pending") {
-    const c = (q: string) => (db.prepare(q).get(r.id) as { c: number }).c;
-    const pend = c("SELECT COUNT(*) c FROM orders WHERE restaurant_id=? AND status='pending'");
-    const cancels = c("SELECT COUNT(*) c FROM cancel_requests cr JOIN orders o ON o.id=cr.order_id WHERE o.restaurant_id=? AND cr.status='requested'");
-    const claims = c("SELECT COUNT(*) c FROM orders WHERE restaurant_id=? AND claimed_paid=1 AND payment_status='pending' AND status!='cancelled'");
-    const owed = c("SELECT COALESCE(SUM(total_paise),0) c FROM orders WHERE restaurant_id=? AND payment_status='pending' AND status!='cancelled'");
-    const off = db.prepare("SELECT name FROM items WHERE restaurant_id=? AND deleted=0 AND available=0").all(r.id) as { name: string }[];
+    const c = async (q: string) => ((await db.prepare(q).get(r.id)) as { c: number }).c;
+    const pend = await c("SELECT COUNT(*) c FROM orders WHERE restaurant_id=? AND status='pending'");
+    const cancels = await c("SELECT COUNT(*) c FROM cancel_requests cr JOIN orders o ON o.id=cr.order_id WHERE o.restaurant_id=? AND cr.status='requested'");
+    const claims = await c("SELECT COUNT(*) c FROM orders WHERE restaurant_id=? AND claimed_paid=1 AND payment_status='pending' AND status!='cancelled'");
+    const owed = await c("SELECT COALESCE(SUM(total_paise),0) c FROM orders WHERE restaurant_id=? AND payment_status='pending' AND status!='cancelled'");
+    const today = (await db.prepare("SELECT COUNT(*) total, COUNT(*) FILTER (WHERE status='pending') pending, COUNT(*) FILTER (WHERE status='completed') completed, COUNT(*) FILTER (WHERE status='cancelled') cancelled FROM orders WHERE restaurant_id=? AND (created_at AT TIME ZONE 'Asia/Kolkata')::date=(now() AT TIME ZONE 'Asia/Kolkata')::date").get(r.id)) as { total: number; pending: number; completed: number; cancelled: number };
+    const recent = (await db.prepare("SELECT * FROM orders WHERE restaurant_id=? ORDER BY id DESC LIMIT 6").all(r.id)) as { id: number; number: number; table_name: string; total_paise: number; payment_method: string; status: string; created_at: string }[];
+    const off = await db.prepare("SELECT name FROM items WHERE restaurant_id=? AND deleted=0 AND available=0").all(r.id) as { name: string }[];
     return (
-      <div><Flash sp={sp} /><AutoRefresh seconds={25} count={pend} sound />
+      <div><PageHead title={`Welcome back, ${u.name.split(" ")[0]}`} sub={`Here is what is happening at ${r.name} today.`}><Link className="btn alt" href="/admin/orders">Open orders</Link></PageHead><Flash sp={sp} /><AutoRefresh seconds={25} count={pend} sound />
         {r.state === "inactive" && <div className="msg err"><strong>Your restaurant is inactive</strong>{r.inactive_reason ? `: ${r.inactive_reason}` : ""}. You can view records but cannot take new orders or confirm payments. Contact the platform team.</div>}
         <div className="grid">
-          <Link className="card" href="/admin/orders"><div className="stat"><span className="ic">🧾</span><div><div className="muted">New and pending orders</div><h1>{pend}</h1></div></div></Link>
-          <Link className="card" href="/admin/orders?status=pending&pay=&date="><div className="stat"><span className="ic">✕</span><div><div className="muted">Cancellation requests</div><h1 className={cancels ? "bad" : ""}>{cancels}</h1></div></div></Link>
-          <Link className="card" href="/admin/payments"><div className="stat"><span className="ic">₹</span><div><div className="muted">"Customer says paid" – to confirm</div><h1>{claims}</h1></div></div></Link>
-          <Link className="card" href="/admin/payments"><div className="stat"><span className="ic">⏳</span><div><div className="muted">Outstanding balance</div><h1>{inr(owed)}</h1></div></div></Link>
+          <Link className="card" href="/admin/orders"><div className="stat"><span className="ic amber"><Icon name="bell" size={22} /></span><div><div className="muted">New and pending orders</div><h1>{pend}</h1></div></div></Link>
+          <Link className="card" href="/admin/orders?status=pending&pay=&date="><div className="stat"><span className="ic red"><Icon name="ban" size={22} /></span><div><div className="muted">Cancellation requests</div><h1 className={cancels ? "bad" : ""}>{cancels}</h1></div></div></Link>
+          <Link className="card" href="/admin/payments"><div className="stat"><span className="ic blue"><Icon name="mobile" size={22} /></span><div><div className="muted">"Customer says paid" – to confirm</div><h1>{claims}</h1></div></div></Link>
+          <Link className="card" href="/admin/payments"><div className="stat"><span className="ic violet"><Icon name="wallet" size={22} /></span><div><div className="muted">Outstanding balance</div><h1>{inr(owed)}</h1></div></div></Link>
         </div>
+        <h2>Today</h2>
+        <div className="grid">{([["receipt", "Total orders", today.total, ""], ["clock", "Pending", today.pending, "amber"], ["check", "Completed", today.completed, "green"], ["x", "Cancelled", today.cancelled, "red"]] as [IconName, string, number, string][]).map(([ic, k, v, c]) => <div className="card stat" key={k}><span className={`ic ${c}`}><Icon name={ic} size={22} /></span><div><div className="muted">{k}</div><h1>{v}</h1></div></div>)}</div>
+        <h2>Recent orders <Link href="/admin/orders?status=&pay=&date=" style={{ fontSize: ".9rem", fontWeight: 400 }}>View all →</Link></h2>
+        {recent.length === 0 ? <p className="muted">No orders yet.</p> : <table className="t"><thead><tr><th>Order</th><th>Table</th><th>Amount</th><th>Payment</th><th>Status</th><th>When</th></tr></thead><tbody>
+          {recent.map((o) => <tr key={o.id}><td>#{o.number}</td><td>{o.table_name}</td><td>{inr(o.total_paise)}</td><td>{o.payment_method === "upi" ? "UPI" : "Cash"}</td><td><span className={`badge ${o.status}`}>{o.status}</span></td><td className="muted">{fmtDate(o.created_at)}</td></tr>)}</tbody></table>}
         {off.length > 0 && <p><strong>Marked unavailable:</strong> {off.map((i) => i.name).join(", ")} · <Link href="/admin/menu">Manage menu</Link></p>}
         <p className="muted">Customers can find you at <Link href={`/r/${r.slug}`}>/r/{r.slug}</Link>.</p>
       </div>);

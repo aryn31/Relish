@@ -2,19 +2,20 @@ import { requireRestAdmin } from "@/lib/auth";
 import { db, inr, fmtDate } from "@/lib/db";
 import { getRestaurant } from "@/lib/restaurant";
 import { uploadUpi, confirmPayment } from "@/app/actions/admin";
+import PageHead from "@/components/PageHead";
 import Flash from "@/components/Flash";
 import Confirm from "@/components/Confirm";
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const sp = await searchParams; const u = await requireRestAdmin(); const r = getRestaurant(u.restaurant_id)!;
-  const owed = db.prepare("SELECT * FROM orders WHERE restaurant_id=? AND payment_status='pending' AND status!='cancelled' ORDER BY created_at").all(r.id) as any[];
+  const sp = await searchParams; const u = await requireRestAdmin(); const r = (await getRestaurant(u.restaurant_id))!;
+  const owed = await db.prepare("SELECT * FROM orders WHERE restaurant_id=? AND payment_status='pending' AND status!='cancelled' ORDER BY created_at").all(r.id) as any[];
   const outstanding = owed.reduce((s, o) => s + o.total_paise, 0);
   return (
-    <div><Flash sp={sp} />
+    <div><PageHead title="Payments & UPI" sub="Confirm payments and see what is still owed." /><Flash sp={sp} />
       <h2 style={{ marginTop: 0 }}>UPI QR code</h2>
       <p className="muted">Upload the image of your UPI QR code. Customers see it only after placing an order.</p>
       <form action={uploadUpi} className="row"><input type="file" name="upi" accept="image/jpeg,image/png,image/webp" required className="grow" /><button>{r.upi_qr ? "Replace" : "Upload"}</button></form>
-      {r.upi_qr ? <p className="ok">✓ UPI QR code uploaded.</p> : <p className="bad">Not uploaded yet.</p>}
+      {r.upi_qr ? <><p className="ok">✓ UPI QR code uploaded.</p><img src="/api/upi/mine" alt="Your UPI QR" width={180} height={180} style={{ borderRadius: 12, border: "1px solid var(--line)" }} /></> : <p className="bad">Not uploaded yet.</p>}
       {r.state !== "pending" && <>
         <h2>Outstanding balance: {inr(outstanding)}</h2>
         {r.state === "inactive" && <div className="msg">Restaurant is inactive: payments cannot be confirmed until it is reactivated.</div>}
