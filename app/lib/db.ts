@@ -142,8 +142,8 @@ export async function rateOk(key: string, n: number, windowSec: number): Promise
   return true;
 }
 
-export function fmtDate(s: string | Date | null | undefined) {
+export function fmtDate(s: string | Date | null | undefined, lang = "en") {
   if (!s) return "";
   const d = s instanceof Date ? s : new Date(s);
-  return d.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString(lang === "hi" ? "hi-IN" : "en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }

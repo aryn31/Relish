@@ -1,0 +1,60 @@
+export const D: Record<string, string> = {
+  // Sidebar / shell
+  "Super Admin": "सुपर एडमिन", "Applications": "आवेदन", "Restaurants": "रेस्टोरेंट", "Admin accounts": "एडमिन खाते",
+  "Order lookup": "ऑर्डर खोज", "Sent emails": "भेजे गए ईमेल",
+  // Page heads
+  "Platform dashboard": "प्लैटफ़ॉर्म डैशबोर्ड", "Overview of the platform": "प्लैटफ़ॉर्म का सारांश",
+  "Review restaurants that want to join.": "जुड़ना चाहने वाले रेस्टोरेंट की समीक्षा करें।",
+  "Create, disable or recover restaurant admins.": "रेस्टोरेंट एडमिन बनाएँ, बंद करें या रिकवर करें।",
+  "For support and disputes only.": "केवल सहायता और विवाद के लिए।",
+  "Development mail log. No email provider is connected yet.": "डेवलपमेंट मेल लॉग। अभी कोई ईमेल प्रदाता जुड़ा नहीं है।",
+  "{n} on the platform": "प्लैटफ़ॉर्म पर {n}",
+  // Dashboard
+  "Total restaurants": "कुल रेस्टोरेंट", "Applications awaiting review": "समीक्षा के इंतज़ार में आवेदन",
+  "Setup fees awaiting confirmation": "पुष्टि के इंतज़ार में सेटअप शुल्क", "Registered customers": "रजिस्टर्ड ग्राहक",
+  "Needs your attention": "आपके ध्यान की ज़रूरत", "Nothing waiting.": "कुछ भी लंबित नहीं।",
+  "Awaiting review": "समीक्षा का इंतज़ार", "Approved · fee {amt} awaiting payment": "स्वीकृत · शुल्क {amt} का भुगतान बाकी",
+  "Open": "खोलें", "Settings": "सेटिंग", "Max pending orders per customer per restaurant": "प्रति ग्राहक प्रति रेस्टोरेंट अधिकतम लंबित ऑर्डर",
+  "Save": "सहेजें",
+  // Applications
+  "Approved": "स्वीकृत", "Rejected": "अस्वीकृत", "Nothing here.": "यहाँ कुछ नहीं है।", "Updated": "अपडेट किया गया", "fee": "शुल्क",
+  "Review": "समीक्षा", "not_assigned": "तय नहीं", "awaiting": "भुगतान बाकी", "confirmed": "पुष्टि हो चुकी",
+  // Application detail
+  "Not found.": "नहीं मिला।", "Application #{n} · {date}": "आवेदन #{n} · {date}",
+  "Possible duplicate:": "संभावित डुप्लिकेट:", "matches by contact number or name + address. This is only a warning.": "संपर्क नंबर या नाम + पता से मेल खाता है। यह सिर्फ़ एक चेतावनी है।",
+  "Application details": "आवेदन का विवरण", "Restaurant name": "रेस्टोरेंट का नाम", "Type": "प्रकार", "Address": "पता", "Contact": "संपर्क",
+  "Owner": "मालिक", "Email": "ईमेल", "verified": "सत्यापित", "not verified": "सत्यापित नहीं", "FSSAI / GSTIN": "FSSAI / GSTIN", "About": "परिचय",
+  "View private preview": "निजी प्रीव्यू देखें", "Setup fee": "सेटअप शुल्क", "not assigned": "तय नहीं", "awaiting payment": "भुगतान बाकी", "locked": "लॉक", "previous": "पिछला",
+  "Amount ₹": "राशि ₹", "Fee amount": "शुल्क राशि", "Change fee": "शुल्क बदलें", "Assign fee": "शुल्क तय करें",
+  "Mark fee received": "शुल्क मिल गया चिह्नित करें", "Confirm you have received this fee in your own records?": "क्या आप पुष्टि करते हैं कि यह शुल्क आपके रिकॉर्ड में मिल चुका है?",
+  "Decision": "निर्णय", "Reason (required to reject or return)": "कारण (अस्वीकार या लौटाने के लिए ज़रूरी)",
+  "Approve": "स्वीकृत करें", "Return for corrections": "सुधार के लिए लौटाएँ", "Reject": "अस्वीकार करें",
+  // Restaurants
+  "Restaurant": "रेस्टोरेंट", "State": "स्थिति", "Setup": "सेटअप", "Action": "कार्रवाई", "Ready": "तैयार",
+  "Waiting on {items}": "इनका इंतज़ार: {items}", "Fee:": "शुल्क:", "Reason": "कारण",
+  "approval": "स्वीकृति", "setup fee": "सेटअप शुल्क", "UPI QR": "UPI QR", "menu": "मेन्यू", "a table": "एक टेबल", "owner review": "मालिक की समीक्षा",
+  "Deactivate": "निष्क्रिय करें", "Reactivate": "फिर से सक्रिय करें", "Owner is setting up": "मालिक सेटअप कर रहे हैं",
+  "Deactivate? It will be hidden and stop taking orders. Unpaid orders stay outstanding until reactivation.": "निष्क्रिय करें? यह छिप जाएगा और ऑर्डर लेना बंद कर देगा। बिना भुगतान वाले ऑर्डर फिर से सक्रिय होने तक बकाया रहेंगे।",
+  // Admins
+  "Add an admin to a restaurant": "रेस्टोरेंट में एडमिन जोड़ें", "Name": "नाम", "Create": "बनाएँ", "Disabled": "बंद",
+  "Enable": "चालू करें", "Disable": "बंद करें", "Change this account's access?": "इस खाते की पहुँच बदलें?", "Send recovery link": "रिकवरी लिंक भेजें",
+  // Orders
+  "Order #": "ऑर्डर #", "Order number": "ऑर्डर नंबर", "Find": "खोजें", "No such order.": "ऐसा कोई ऑर्डर नहीं।", "table": "टेबल", "payment": "भुगतान",
+  "cash": "नकद", "upi": "UPI", "Reason for correction": "सुधार का कारण",
+  "Revert this payment to Pending (support correction)?": "इस भुगतान को वापस लंबित करें (सहायता सुधार)?", "Revert payment (correction)": "भुगतान वापस करें (सुधार)",
+  // Action messages (app/actions/super.ts)
+  "Application not found.": "आवेदन नहीं मिला।", "Enter a fee amount above zero.": "शून्य से ज़्यादा शुल्क राशि दर्ज करें।",
+  "The fee is already confirmed and locked.": "शुल्क पहले ही पुष्ट और लॉक हो चुका है।", "Fee saved and owner notified.": "शुल्क सहेजा गया और मालिक को सूचित किया गया।",
+  "Assign a fee first.": "पहले शुल्क तय करें।", "Fee confirmed.": "शुल्क की पुष्टि हुई।",
+  "This application is not waiting for review.": "यह आवेदन समीक्षा के इंतज़ार में नहीं है।", "A reason is required.": "कारण देना ज़रूरी है।",
+  "Application approved.": "आवेदन स्वीकृत हुआ।", "Application rejected.": "आवेदन अस्वीकृत हुआ।", "Application returned.": "आवेदन सुधार के लिए लौटाया गया।",
+  "Activation conditions are not all met yet.": "सक्रिय करने की सभी शर्तें अभी पूरी नहीं हुई हैं।", "Restaurant is active.": "रेस्टोरेंट सक्रिय है।",
+  "A reason is required to deactivate.": "निष्क्रिय करने के लिए कारण देना ज़रूरी है।",
+  "Restaurant deactivated. Unpaid orders stay outstanding until reactivation.": "रेस्टोरेंट निष्क्रिय हुआ। बिना भुगतान वाले ऑर्डर फिर से सक्रिय होने तक बकाया रहेंगे।",
+  "Restaurant, name and a valid email are required.": "रेस्टोरेंट, नाम और सही ईमेल ज़रूरी हैं।", "That email already has an account.": "इस ईमेल से पहले से खाता है।",
+  "Admin created. A link to set the password was emailed.": "एडमिन बनाया गया। पासवर्ड सेट करने का लिंक ईमेल किया गया।",
+  "Disabled. Warning: this restaurant now has no active admin and cannot process orders.": "बंद किया गया। चेतावनी: इस रेस्टोरेंट का अब कोई सक्रिय एडमिन नहीं है और यह ऑर्डर प्रोसेस नहीं कर सकता।",
+  "Updated.": "अपडेट हो गया।", "Recovery link sent.": "रिकवरी लिंक भेज दिया गया।", "A note is required.": "नोट देना ज़रूरी है।",
+  "Payment reverted to Pending.": "भुगतान वापस लंबित किया गया।", "Nothing to revert.": "वापस करने के लिए कुछ नहीं है।",
+  "Enter 1–50.": "1–50 के बीच दर्ज करें।", "Saved.": "सहेजा गया।",
+};

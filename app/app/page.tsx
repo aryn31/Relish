@@ -7,7 +7,7 @@ import Icon from "@/components/Icon";
 const PAGE = 12;
 type Row = Restaurant & { cover: string | null };
 export default async function Home({ searchParams }: { searchParams: Promise<{ q?: string; type?: string; p?: string }> }) {
-  const { q = "", type = "", p = "1" } = await searchParams; const { t } = await tr();
+  const { q = "", type = "", p = "1" } = await searchParams; const { t, _ } = await tr();
   const page = Math.max(1, Number(p) || 1);
   const where = ["r.state='active'"]; const args: (string | number)[] = [];
   if (q) { where.push("r.name ILIKE ?"); args.push(`%${q}%`); }
@@ -23,38 +23,38 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ q
     <main>
       <section className="hero">
         <div>
-          <span className="eyebrow"><Icon name="spark" size={14} /> Dine-in ordering, reimagined</span>
-          <h1>Discover great food. <em>Order with ease.</em></h1>
-          <p className="lead">Scan the QR at your table, browse the menu with photos, order and pay — no waiting for the waiter.</p>
+          <span className="eyebrow"><Icon name="spark" size={14} /> {_("Dine-in ordering, reimagined")}</span>
+          <h1>{_("Discover great food.")} <em>{_("Order with ease.")}</em></h1>
+          <p className="lead">{_("Scan the QR at your table, browse the menu with photos, order and pay — no waiting for the waiter.")}</p>
           <form className="search" action="/#restaurants"><input name="q" defaultValue={q} placeholder={t("search")} aria-label={t("search")} /><button><Icon name="search" size={16} />{t("go")}</button></form>
-          <div className="stats"><div><b>{n.r}</b><span>Restaurants</span></div><div><b>{n.d}+</b><span>Dishes</span></div><div><b>{n.o}+</b><span>Orders served</span></div></div>
+          <div className="stats"><div><b>{n.r}</b><span>{_("Restaurants")}</span></div><div><b>{n.d}+</b><span>{_("Dishes")}</span></div><div><b>{n.o}+</b><span>{_("Orders served")}</span></div></div>
         </div>
         {collage.length >= 3 && <div className="collage" aria-hidden="true">
           {collage.map((c) => <img key={c} src={`/api/img/${c}`} alt="" />)}
-          <div className="float-chip a"><i><Icon name="qr" size={16} /></i>Scan &amp; order</div>
-          <div className="float-chip b"><i><Icon name="check" size={16} /></i>Table 5 · Confirmed</div>
+          <div className="float-chip a"><i><Icon name="qr" size={16} /></i>{_("Scan & order")}</div>
+          <div className="float-chip b"><i><Icon name="check" size={16} /></i>{_("Table 5 · Confirmed")}</div>
         </div>}
       </section>
 
       <div className="marquee" aria-hidden="true"><div>{[...cuisines, ...cuisines].map((c, i) => <span key={i}>{c}</span>)}</div></div>
 
       <section id="restaurants">
-        <div className="sec-head"><div><span className="eyebrow">Explore</span><h2>Find your next meal</h2></div>
+        <div className="sec-head"><div><span className="eyebrow">{_("Explore")}</span><h2>{_("Find your next meal")}</h2></div>
           <form className="row" action="/#restaurants" style={{ flexWrap: "nowrap" }}>{type && <input type="hidden" name="type" value={type} />}<input name="q" defaultValue={q} placeholder={t("search")} aria-label={t("search")} style={{ minWidth: 230 }} /><button className="alt"><Icon name="search" size={16} /></button></form></div>
-        <div className="chips"><a className={`chip ${type ? "" : "on"}`} href={chipHref("")}>{t("all_types")}</a>{types.map((x) => <a key={x} className={`chip ${type === x ? "on" : ""}`} href={chipHref(x)}>{x}</a>)}</div>
+        <div className="chips"><a className={`chip ${type ? "" : "on"}`} href={chipHref("")}>{t("all_types")}</a>{types.map((x) => <a key={x} className={`chip ${type === x ? "on" : ""}`} href={chipHref(x)}>{_(x)}</a>)}</div>
         {list.length === 0 ? <p className="muted">{t("none_found")}</p> :
           <div className="rgrid" style={{ marginTop: 10 }}>
             {list.slice(0, PAGE).map((r) => (
               <Link href={`/r/${r.slug}`} className="rcard" key={r.id}>
                 {r.cover && <img src={`/api/img/${r.cover}`} alt="" />}
-                <span className="tag">{r.type}</span><span className="go"><Icon name="up" size={20} /></span>
+                <span className="tag">{_(r.type)}</span><span className="go"><Icon name="up" size={20} /></span>
                 <div className="body"><h3>{r.name}</h3><div className="loc"><Icon name="pin" size={14} />{r.address}</div>{r.description && <p className="desc">{r.description}</p>}</div>
               </Link>))}
           </div>}
         <p className="row" style={{ marginTop: 18 }}>{page > 1 && <Link className="btn alt" href={qs(page - 1)}>← {t("prev")}</Link>}{list.length > PAGE && <Link className="btn alt" href={qs(page + 1)}>{t("next")} →</Link>}</p>
       </section>
 
-      <div className="sec-head"><div><span className="eyebrow">How it works</span><h2>From table to plate in three taps</h2></div></div>
+      <div className="sec-head"><div><span className="eyebrow">{_("How it works")}</span><h2>{_("From table to plate in three taps")}</h2></div></div>
       <section className="bento">
         <div className="tile t1"><h3>{t("how_c")}</h3>
           {[t("how_c1"), t("how_c2"), t("how_c3")].map((s, i) => <div className="step" key={i}><b>{i + 1}</b><span>{s}</span></div>)}</div>

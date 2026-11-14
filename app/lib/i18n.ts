@@ -40,6 +40,8 @@ const hi: Partial<Record<K, string>> = {
   veg: "शाकाहारी", nonveg: "मांसाहारी", price_changed: "कुछ कीमतें बदल गई हैं। कृपया देखकर पुष्टि करें।", confirm_prices: "नई कीमतें स्वीकार करें", item_gone: "कुछ आइटम अब उपलब्ध नहीं हैं। आगे बढ़ने के लिए हटाएँ।",
 };
 
+import { translate } from "./hi";
+import { fmtDate } from "./db";
 export type Lang = "en" | "hi";
 export async function getLang(): Promise<Lang> {
   const c = (await cookies()).get("lang")?.value;
@@ -49,7 +51,10 @@ export async function getLang(): Promise<Lang> {
 export async function tr() {
   const l = await getLang();
   const t = (k: K) => (l === "hi" ? hi[k] : undefined) ?? en[k];
-  return { t, lang: l };
+  /** English-as-key translator: _("Welcome back, {name}", { name }). Falls back to English. */
+  const _ = (s: string, vars?: Record<string, string | number>) => translate(l, s, vars);
+  const fd = (v: string | Date | null | undefined) => fmtDate(v, l);
+  return { t, _, fd, lang: l };
 }
 export const STR = { en, hi };
 export type { K };
