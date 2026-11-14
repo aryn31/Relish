@@ -3,7 +3,7 @@ import { db, log } from "@/lib/db";
 import { requireSuper, newToken } from "@/lib/auth";
 import { sendMail, baseUrl } from "@/lib/mail";
 import { go } from "@/lib/flash";
-import { getRestaurant, fee, checklist, maybeActivate } from "@/lib/restaurant";
+import { getRestaurant, fee, checklist, maybeActivate, feeEnabled } from "@/lib/restaurant";
 
 const s = (fd: FormData, k: string) => String(fd.get(k) || "").trim();
 const n = (fd: FormData, k: string) => Number(fd.get(k));
@@ -18,6 +18,7 @@ async function appCtx(fd: FormData) {
 
 export async function assignFee(fd: FormData) {
   const u = await requireSuper(); const { a, back } = await appCtx(fd);
+  if (!feeEnabled()) go(back, "Setup fees are switched off.", true);
   const amt = Math.round(Number(s(fd, "amount")) * 100);
   if (!(amt > 0)) go(back, "Enter a fee amount above zero.", true);
   const f = (await fee(a.restaurant_id))!;
@@ -29,6 +30,7 @@ export async function assignFee(fd: FormData) {
 }
 export async function confirmFee(fd: FormData) {
   const u = await requireSuper(); const { a, back } = await appCtx(fd);
+  if (!feeEnabled()) go(back, "Setup fees are switched off.", true);
   const f = (await fee(a.restaurant_id))!;
   if (f.state !== "awaiting") go(back, "Assign a fee first.", true);
   await db.prepare("UPDATE setup_fees SET state='confirmed', confirmed_at=datetime('now') WHERE restaurant_id=? AND state='awaiting'").run(a.restaurant_id);

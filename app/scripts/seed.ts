@@ -75,7 +75,40 @@ const RESTS: R[] = [
 ];
 
 async function main() {
-  if (await db.prepare("SELECT 1 FROM restaurants WHERE slug='the-green-fork'").get()) { console.log("Already seeded."); return; }
+  if (!(await db.prepare("SELECT 1 FROM restaurants WHERE slug='the-green-fork'").get())) await base(); else console.log("Base demo data already present.");
+  await extras();
+}
+
+/** Extra demo accounts covering every onboarding state. Safe to re-run. */
+async function extras() {
+  const exists = async (email: string) => !!(await db.prepare("SELECT 1 FROM users WHERE email=?").get(email));
+  let added = 0;
+  // second staff admin on an existing restaurant (multiple admins per restaurant)
+  if (!(await exists("staff@greenfork.demo"))) {
+    const r = (await db.prepare("SELECT id FROM restaurants WHERE slug='the-green-fork'").get()) as { id: number };
+    await db.prepare("INSERT INTO users(email,name,password_hash,role,restaurant_id,email_verified) VALUES(?,?,?,'restaurant_admin',?,1)").run("staff@greenfork.demo", "Kavita (Staff)", hash, r.id); added++;
+  }
+  // applicants in different states
+  const applicants: { email: string; owner: string; name: string; slug: string; type: string; addr: string; phone: string; app: "rejected" | "returned" | "draft"; reason?: string; verified: number }[] = [
+    { email: "owner@saffron.demo", owner: "Deepak Rathi", name: "Saffron Street", slug: "saffron-street", type: "Fast food", addr: "Sector 29, Gurugram", phone: "9876500008", app: "rejected", reason: "We could not verify the contact number. Please apply again with a working number.", verified: 1 },
+    { email: "owner@cloudkitchen.demo", owner: "Isha Kapoor", name: "Cloud Kitchen Co", slug: "cloud-kitchen-co", type: "Other", addr: "HSR Layout, Bengaluru", phone: "9876500009", app: "returned", reason: "Please add a landmark to your address and a short description.", verified: 1 },
+    { email: "owner@newbistro.demo", owner: "Manish Arora", name: "New Bistro", slug: "new-bistro", type: "Cafe", addr: "Jubilee Hills, Hyderabad", phone: "9876500010", app: "draft", verified: 0 },
+  ];
+  for (const a of applicants) {
+    if (await exists(a.email)) continue;
+    const u = await db.prepare("INSERT INTO users(email,name,password_hash,role,email_verified) VALUES(?,?,?,'restaurant_admin',?)").run(a.email, a.owner, hash, a.verified);
+    const r = await db.prepare("INSERT INTO restaurants(slug,name,owner_name,email,address,phone,phone_norm,type,description) VALUES(?,?,?,?,?,?,?,?,'')").run(a.slug, a.name, a.owner, a.email, a.addr, a.phone, a.phone.slice(-10), a.type);
+    await db.prepare("UPDATE users SET restaurant_id=? WHERE id=?").run(r.lastInsertRowid, u.lastInsertRowid);
+    await db.prepare("INSERT INTO applications(restaurant_id,admin_user_id,state,reason) VALUES(?,?,?,?)").run(r.lastInsertRowid, u.lastInsertRowid, a.app, a.reason ?? null);
+    await db.prepare("INSERT INTO setup_fees(restaurant_id) VALUES(?)").run(r.lastInsertRowid); added++;
+  }
+  // more customers
+  for (const [n, e] of [["Sneha Iyer", "sneha@demo.com"], ["Arjun Mehta", "arjun@demo.com"], ["Fatima Sheikh", "fatima@demo.com"]])
+    if (!(await exists(e))) { await db.prepare("INSERT INTO users(email,name,password_hash,role,email_verified) VALUES(?,?,?,'customer',1)").run(e, n, hash); added++; }
+  console.log(`Extra demo accounts added: ${added}`);
+}
+
+async function base() {
   const ids: Record<string, number> = {};
   for (const r of RESTS) {
     const u = await db.prepare("INSERT INTO users(email,name,password_hash,role,email_verified) VALUES(?,?,?,'restaurant_admin',1)").run(r.email, r.owner, hash);

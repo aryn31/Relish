@@ -52,4 +52,7 @@ export async function useToken(token: string, kind: string): Promise<number | nu
   return r.user_id;
 }
 
+/** Owner email verification. Off by default (no verification email, no banner). Set EMAIL_VERIFICATION_ENABLED=true to bring it back. */
+export const emailVerificationEnabled = () => process.env.EMAIL_VERIFICATION_ENABLED === "true";
+
 export const strongPassword = (p: string) => p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p);

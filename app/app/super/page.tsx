@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db, inr, setting } from "@/lib/db";
 import { saveSettings } from "@/app/actions/super";
 import Icon, { type IconName } from "@/components/Icon";
+import { feeEnabled } from "@/lib/restaurant";
 import PageHead from "@/components/PageHead";
 import Flash from "@/components/Flash";
 import { tr } from "@/lib/i18n";
@@ -11,9 +12,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ o
   const c = async (q: string) => ((await db.prepare(q).get()) as { c: number }).c;
   const stats: [string, number][] = await Promise.all(([
     ["Total restaurants", "SELECT COUNT(*) c FROM restaurants"], ["Active", "SELECT COUNT(*) c FROM restaurants WHERE state='active'"], ["Inactive", "SELECT COUNT(*) c FROM restaurants WHERE state='inactive'"],
-    ["Applications awaiting review", "SELECT COUNT(*) c FROM applications WHERE state='submitted'"], ["Setup fees awaiting confirmation", "SELECT COUNT(*) c FROM setup_fees WHERE state='awaiting'"],
+    ["Applications awaiting review", "SELECT COUNT(*) c FROM applications WHERE state='submitted'"], ...(feeEnabled() ? [["Setup fees awaiting confirmation", "SELECT COUNT(*) c FROM setup_fees WHERE state='awaiting'"]] : []),
     ["Registered customers", "SELECT COUNT(*) c FROM users WHERE role='customer' AND disabled=0"]] as [string, string][]).map(async ([k, q]) => [k, await c(q)] as [string, number]));
-  const apps = await db.prepare("SELECT a.id,a.state,a.updated_at,r.name,f.state fs,f.amount_paise FROM applications a JOIN restaurants r ON r.id=a.restaurant_id JOIN setup_fees f ON f.restaurant_id=r.id WHERE a.state='submitted' OR (a.state='approved' AND f.state='awaiting') ORDER BY a.updated_at").all() as any[];
+  const apps = await db.prepare(`SELECT a.id,a.state,a.updated_at,r.name,f.state fs,f.amount_paise FROM applications a JOIN restaurants r ON r.id=a.restaurant_id JOIN setup_fees f ON f.restaurant_id=r.id WHERE a.state='submitted' ${feeEnabled() ? "OR (a.state='approved' AND f.state='awaiting')" : ""} ORDER BY a.updated_at`).all() as any[];
   return (
     <div><PageHead title="Platform dashboard" sub="Overview of the platform" /><Flash sp={sp} />
       <div className="grid">{stats.map(([k, v]) => <div className="card stat" key={k}><span className={`ic ${ICON[k]?.[1] ?? ""}`}><Icon name={ICON[k]?.[0] ?? "dash"} size={22} /></span><div><div className="muted">{_(k)}</div><h1>{v}</h1></div></div>)}</div>

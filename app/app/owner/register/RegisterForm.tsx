@@ -4,7 +4,7 @@ import { useT } from "@/components/I18n";
 import { registerRestaurant } from "@/app/actions/owner";
 
 const TYPES = ["Vegetarian restaurant", "Cafe", "Fast food", "Family restaurant", "Bakery", "Other"];
-export default function RegisterForm() {
+export default function RegisterForm({ verify = false }: { verify?: boolean }) {
   const _ = useT();
   const [step, setStep] = useState(1);
   const [d, setD] = useState({ name: "", owner: "", type: TYPES[0], address: "", phone: "", email: "", password: "", fssai: "", gstin: "" });
@@ -37,7 +37,7 @@ export default function RegisterForm() {
       <div hidden={step !== 2}>
         <label htmlFor="email">{_("Email")}</label><input id="email" name="email" type="email" value={d.email} onChange={set("email")} autoComplete="email" />
         <label htmlFor="password">{_("Password")}</label><input id="password" name="password" type="password" value={d.password} onChange={set("password")} autoComplete="new-password" />
-        <p className="muted">{_("At least 8 characters, with a letter and a number. We will email you a link to verify your address.")}</p>
+        <p className="muted">{verify ? _("At least 8 characters, with a letter and a number. We will email you a link to verify your address.") : _("At least 8 characters, with a letter and a number.")}</p>
       </div>
       {step === 3 && <div className="card stack"><h3 style={{ marginTop: 0 }}>{_("Review your details")}</h3>
         {([["Restaurant", d.name], ["Owner", d.owner], ["Type", _(d.type)], ["Address", d.address], ["Contact", d.phone], ["Email", d.email]] as const).map(([k, v]) => <div key={k}><span className="muted">{_(k)}: </span>{v}</div>)}

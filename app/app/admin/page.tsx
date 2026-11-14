@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { requireRestAdmin } from "@/lib/auth";
+import { requireRestAdmin, emailVerificationEnabled } from "@/lib/auth";
 import { db, inr } from "@/lib/db";
-import { getRestaurant, application, fee, checklist } from "@/lib/restaurant";
+import { getRestaurant, application, fee, checklist, feeEnabled } from "@/lib/restaurant";
 import { resendVerification, submitApplication, startNewApplication, markReviewed } from "@/app/actions/owner";
 import { Check } from "lucide-react";
 import Flash from "@/components/Flash";
@@ -53,18 +53,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ o
       <div className="cols"><div className="stack">
       <div className="card"><div className="row" style={{ justifyContent: "space-between" }}><h3 style={{ margin: 0 }}>{_("Application")}</h3><span className={`badge ${app.state === "returned" ? "pending" : app.state === "submitted" ? "pending" : app.state}`}>{stateText[app.state]}</span></div>
         {app.reason && <p className="msg err"><strong>{_("Message from the platform team:")}</strong> {app.reason}</p>}
-        {!u.email_verified && <div className="msg">{_("Please verify your email (check your inbox).")} <form action={resendVerification} style={{ display: "inline" }}><button className="link">{_("Send the link again")}</button></form></div>}
+        {emailVerificationEnabled() && !u.email_verified && <div className="msg">{_("Please verify your email (check your inbox).")} <form action={resendVerification} style={{ display: "inline" }}><button className="link">{_("Send the link again")}</button></form></div>}
         {app.state === "draft" && <><p><strong>{_("Next:")}</strong> {_("check your details and the")} <Link href="/admin/preview">{_("preview of your page")}</Link>{_(", then submit for review.")}</p>
-          <p className="row"><Link href="/admin/info" className="btn alt">{_("Edit details")}</Link><form action={submitApplication}><button disabled={!u.email_verified}>{_("Submit for review")}</button></form></p></>}
-        {app.state === "returned" && <><p><strong>{_("Next:")}</strong> {_("fix the points above in")} <Link href="/admin/info">{_("Restaurant info")}</Link>{_(", then resubmit.")}</p><form action={submitApplication}><button disabled={!u.email_verified}>{_("Resubmit for review")}</button></form></>}
-        {app.state === "submitted" && <p><strong>{_("Next:")}</strong> {_("nothing to do. We will email you when we have reviewed it.")}{f.state !== "confirmed" && " " + _("Your setup fee will be shown here once assigned.")}</p>}
+          <div className="row"><Link href="/admin/info" className="btn alt">{_("Edit details")}</Link><form action={submitApplication}><button>{_("Submit for review")}</button></form></div></>}
+        {app.state === "returned" && <><p><strong>{_("Next:")}</strong> {_("fix the points above in")} <Link href="/admin/info">{_("Restaurant info")}</Link>{_(", then resubmit.")}</p><form action={submitApplication}><button>{_("Resubmit for review")}</button></form></>}
+        {app.state === "submitted" && <p><strong>{_("Next:")}</strong> {_("nothing to do. We will email you when we have reviewed it.")}{feeEnabled() && f.state !== "confirmed" && " " + _("Your setup fee will be shown here once assigned.")}</p>}
+        {app.state === "approved" && <p><strong>{_("Next:")}</strong> {_("finish the checklist on the right. Your restaurant goes live as soon as every step is done.")}</p>}
         {app.state === "rejected" && <><p>{_("You can start a new application with the same account.")}</p><form action={startNewApplication}><button>{_("Start new application")}</button></form></>}
       </div>
-      <div className="card"><h3 style={{ marginTop: 0 }}>{_("Setup fee")}</h3>
+      {feeEnabled() && <div className="card"><h3 style={{ marginTop: 0 }}>{_("Setup fee")}</h3>
         {f.state === "not_assigned" && <p className="muted">{_("Not assigned yet. We will tell you the amount after reviewing your application.")}</p>}
         {f.state === "awaiting" && <><p><strong>{inr(f.amount_paise!)}</strong> — {_("awaiting payment.")}</p><p className="muted">{_("Pay this one-time fee outside the app using the method the platform team gave you. We confirm once we receive it.")}</p></>}
         {f.state === "confirmed" && <p className="ok">✓ {inr(f.amount_paise!)} — {_("payment confirmed.")}</p>}
-      </div>
+      </div>}
       </div>
       <div className="card sticky"><div className="row" style={{ justifyContent: "space-between" }}><h3 style={{ margin: 0 }}>{_("Setup checklist")}</h3><span className="muted">{_("{done} of {total} done", { done: cl.steps.filter((x) => x.ok).length, total: cl.steps.length })}</span></div>
         <div className="progress" style={{ margin: "12px 0 16px" }}><i style={{ width: `${(cl.steps.filter((x) => x.ok).length / cl.steps.length) * 100}%` }} /></div>

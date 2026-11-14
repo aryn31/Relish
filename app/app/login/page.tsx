@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { login } from "../actions/auth";
+import DemoAccounts from "@/components/DemoAccounts";
 import AuthShell from "@/components/AuthShell";
 import Flash from "@/components/Flash";
 import { tr } from "@/lib/i18n";
@@ -15,6 +16,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ n
         <p><button>{t("login")}</button></p>
       </form>
       <p><Link href="/forgot">{t("forgot")}</Link></p>
+      {process.env.DEMO_MODE === "true" && <DemoAccounts />}
       <p>{t("no_account")} <Link href={`/register?next=${encodeURIComponent(next)}`}>{t("create_account")}</Link></p>
     </AuthShell>
   );

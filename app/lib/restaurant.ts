@@ -8,6 +8,8 @@ export const getBySlug = async (slug: string) => (await db.prepare("SELECT * FRO
 export async function application(restaurantId: number) {
   return await db.prepare("SELECT * FROM applications WHERE restaurant_id=? ORDER BY id DESC LIMIT 1").get(restaurantId) as { id: number; state: string; reason: string | null } | undefined;
 }
+/** Setup-fee payment step. Off by default: registration goes straight to review with no fee. Set SETUP_FEE_ENABLED=true to bring it back. */
+export const feeEnabled = () => process.env.SETUP_FEE_ENABLED === "true";
 export async function fee(restaurantId: number) {
   return await db.prepare("SELECT * FROM setup_fees WHERE restaurant_id=?").get(restaurantId) as { amount_paise: number | null; state: string; prev_amount_paise: number | null } | undefined;
 }
@@ -26,7 +28,8 @@ export async function checklist(r: Restaurant) {
     { key: "table", ok: hasTable },
     { key: "reviewed", ok: !!r.details_reviewed },
   ];
-  return { steps, ok: steps.every((s) => s.ok) };
+  const used = feeEnabled() ? steps : steps.filter((s) => s.key !== "fee");
+  return { steps: used, ok: used.every((s) => s.ok) };
 }
 
 /** Auto-activate a pending restaurant when all conditions hold. Never reactivates Inactive ones automatically. */

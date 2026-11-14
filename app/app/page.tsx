@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { tr } from "@/lib/i18n";
 import type { Restaurant } from "@/lib/restaurant";
 import Icon from "@/components/Icon";
+import { feeEnabled } from "@/lib/restaurant";
 
 const PAGE = 12;
 type Row = Restaurant & { cover: string | null };
@@ -61,7 +62,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ q
         <div className="tile t2"><h3>{t("benefits")}</h3>
           {[t("b1"), t("b2"), t("b3"), t("b4"), t("b5"), t("b6")].map((s, i) => <div className="benefit" key={i}><i><Icon name="check" size={18} /></i>{s}</div>)}</div>
         <div className="tile t3"><h3>{t("how_o")}</h3>
-          <div className="steps6">{[t("o1"), t("o2"), t("o3"), t("o4"), t("o5"), t("o6")].map((s, i) => <div className="step" key={i}><b>{i + 1}</b><span>{s}</span></div>)}</div></div>
+          <div className="steps6">{(feeEnabled() ? [t("o1"), t("o2"), t("o3"), t("o4"), t("o5"), t("o6")] : [t("o1"), _("We review your request and approve it"), t("o5"), t("o6")]).map((s, i) => <div className="step" key={i}><b>{i + 1}</b><span>{s}</span></div>)}</div></div>
       </section>
 
       <section className="cta"><h2>{t("hero_o")}</h2><p style={{ opacity: .85, margin: "0 0 26px", fontSize: "1.05rem" }}>{t("o6")}</p><Link className="btn hot lg" href="/owner/register">{t("register_cta")} <Icon name="right" size={18} /></Link></section>

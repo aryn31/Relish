@@ -2,7 +2,7 @@
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { db, log, rateOk } from "@/lib/db";
-import { startSession, requireRestAdmin, newToken, strongPassword } from "@/lib/auth";
+import { startSession, requireRestAdmin, newToken, strongPassword, emailVerificationEnabled } from "@/lib/auth";
 import { sendMail, baseUrl } from "@/lib/mail";
 import { go } from "@/lib/flash";
 import { slugify, normPhone, application, getRestaurant, maybeActivate } from "@/lib/restaurant";
@@ -26,25 +26,30 @@ export async function registerRestaurant(fd: FormData) {
     const r = await db.prepare("INSERT INTO restaurants(slug,name,owner_name,email,address,phone,phone_norm,type,fssai,gstin) VALUES(?,?,?,?,?,?,?,?,?,?)")
       .run(await slugify(d.name), d.name, d.owner, email, d.address, d.phone, normPhone(d.phone), d.type, s(fd, "fssai") || null, s(fd, "gstin") || null);
     await db.prepare("UPDATE users SET restaurant_id=? WHERE id=?").run(r.lastInsertRowid, u.lastInsertRowid);
-    await db.prepare("INSERT INTO applications(restaurant_id,admin_user_id,state) VALUES(?,?,'draft')").run(r.lastInsertRowid, u.lastInsertRowid);
+    await db.prepare("INSERT INTO applications(restaurant_id,admin_user_id,state) VALUES(?,?,'submitted')").run(r.lastInsertRowid, u.lastInsertRowid);
+    await db.prepare("UPDATE restaurants SET details_reviewed=1 WHERE id=?").run(r.lastInsertRowid);
     await db.prepare("INSERT INTO setup_fees(restaurant_id) VALUES(?)").run(r.lastInsertRowid);
     return { id: Number(u.lastInsertRowid) };
   });
   const u = await tx();
-  await sendMail(email, "Verify your email", `Verify your email: ${baseUrl()}/verify?token=${await newToken(u.id, "verify")}`);
+  if (emailVerificationEnabled()) await sendMail(email, "Verify your email", `Verify your email: ${baseUrl()}/verify?token=${await newToken(u.id, "verify")}`);
+  // The request goes straight to the super admin (no separate submit step).
+  await sendMail(email, "Application submitted", `We received your application for ${d.name}. We will review it shortly.`);
+  const sa = (await db.prepare("SELECT email FROM users WHERE role='super_admin'").get()) as { email: string };
+  await sendMail(sa.email, "New application", `${d.name} submitted an application.`);
   await startSession({ id: u.id, session_version: 0 });
-  go("/admin", "Account created. Please verify your email using the link we sent.");
+  go("/admin", "Account created. Your request has been sent to the platform team.");
 }
 
 export async function resendVerification() {
   const u = await requireRestAdmin();
+  if (!emailVerificationEnabled()) go("/admin");
   if (await rateOk(`resend:${u.id}`, 3, 600)) await sendMail(u.email, "Verify your email", `Verify your email: ${baseUrl()}/verify?token=${await newToken(u.id, "verify")}`);
   go("/admin", "Verification email sent.");
 }
 
 export async function submitApplication() {
   const u = await requireRestAdmin();
-  if (!u.email_verified) go("/admin", "Please verify your email before submitting.", true);
   const app = await application(u.restaurant_id);
   if (!app || !["draft", "returned"].includes(app.state)) go("/admin"); // double-click safe
   await db.prepare("UPDATE applications SET state='submitted', updated_at=datetime('now') WHERE id=? AND state IN ('draft','returned')").run(app.id);
