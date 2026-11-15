@@ -1,4 +1,5 @@
 # Relish — Multi-Restaurant Ordering Platform (PRD v2.0, release 1)
+# Relish2 — Multi-Restaurant Ordering Platform (PRD v2.0, release 1)
 
 The app is split into two services:
 
