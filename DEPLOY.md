@@ -94,6 +94,19 @@ S3_BUCKET=<bucket name>
 Images already in the database keep working. The bucket can stay private, because the backend serves images itself.
 With a bucket, back up both the database and the bucket.
 
+## CI/CD
+
+`.github/workflows/ci.yml` runs on every push and pull request. It type-checks both projects,
+builds the frontend and the backend Docker image, and runs the end-to-end tests against a fresh Postgres.
+Its checks are named **Type-check, build and end-to-end test** and **Backend Docker image**.
+
+To deploy only after those checks pass:
+- **Render** (backend): *Settings → Build & Deploy → Auto-Deploy* = **After CI Checks Pass**.
+- **Vercel** (frontend): *Settings → Deployment Checks* → add both checks, so a deployment is promoted to
+  production only after they pass.
+- **GitHub** (optional): *Settings → Branches → Add rule* for `main` → *Require status checks to pass*,
+  so pull requests can't be merged while tests fail.
+
 ## Updating later
 
 `git push` — Railway rebuilds only the service whose folder changed.

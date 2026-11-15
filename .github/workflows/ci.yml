@@ -1,0 +1,113 @@
+name: CI
+
+# Runs on every push and pull request.
+# Render (backend) and Vercel (frontend) are set to deploy `main` only after these checks pass.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Type-check, build and end-to-end test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: relish
+          POSTGRES_PASSWORD: relish
+          POSTGRES_DB: relish
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U relish"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      # backend
+      DATABASE_URL: postgres://relish:relish@localhost:5432/relish
+      SESSION_SECRET: ci-only-secret-not-used-anywhere-else
+      SUPER_ADMIN_EMAIL: super@example.com
+      SUPER_ADMIN_PASSWORD: ChangeMe123!
+      BASE_URL: http://localhost:3100
+      SETUP_FEE_ENABLED: "false"
+      EMAIL_VERIFICATION_ENABLED: "false"
+      # frontend
+      BACKEND_URL: http://localhost:4000
+      DEMO_MODE: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend
+        working-directory: backend
+        run: npm ci --ignore-scripts
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci --ignore-scripts
+
+      - name: Type-check backend
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Type-check frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Load demo data
+        working-directory: backend
+        run: npm run seed
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          PORT=4000 npm start > ../backend.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4000/api/health && exit 0; sleep 1; done
+          cat ../backend.log; exit 1
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Start frontend
+        working-directory: frontend
+        run: |
+          npx next start -p 3100 > ../frontend.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3100/api/health && exit 0; sleep 1; done
+          cat ../frontend.log; exit 1
+
+      - name: End-to-end tests
+        working-directory: backend
+        run: BASE=http://localhost:3100 npm run e2e
+
+      - name: Server logs
+        if: failure()
+        run: |
+          echo "::group::backend"; cat backend.log || true; echo "::endgroup::"
+          echo "::group::frontend"; cat frontend.log || true; echo "::endgroup::"
+
+  docker:
+    name: Backend Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (same Dockerfile Render uses)
+        run: docker build -t relish-backend ./backend
