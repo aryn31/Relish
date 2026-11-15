@@ -90,7 +90,8 @@ cd backend  && BASE=http://localhost:3100 npm run e2e
 Re-seed afterwards; the tests change data.
 
 Emails are stored in the database and shown at `/super/emails` (connect a real provider in `backend/src/mail.ts`).
-Uploaded images are stored in the database, so a database backup is a complete backup.
+Uploaded images are stored in the database by default. Set `S3_BUCKET` and the `AWS_*` variables on the backend
+to store new images in an S3-compatible bucket instead (images are still served through `/api/img/…`, so the bucket can stay private).
 
 ## Deploying
 See [DEPLOY.md](DEPLOY.md).

@@ -80,6 +80,20 @@ DATABASE_URL="<public url>" npm run photos
 
 (Add `DATABASE_SSL=true` in front if your provider requires TLS.)
 
+## Image bucket (optional)
+
+By default images are stored in Postgres. To store new images in an S3-compatible bucket
+(Neon storage, AWS S3, Cloudflare R2…), add these to the **backend**:
+```
+AWS_ENDPOINT_URL_S3=<bucket endpoint>
+AWS_ACCESS_KEY_ID=<access key id>
+AWS_SECRET_ACCESS_KEY=<secret access key>
+AWS_REGION=<region>
+S3_BUCKET=<bucket name>
+```
+Images already in the database keep working. The bucket can stay private, because the backend serves images itself.
+With a bucket, back up both the database and the bucket.
+
 ## Updating later
 
 `git push` — Railway rebuilds only the service whose folder changed.
