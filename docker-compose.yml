@@ -1,5 +1,7 @@
 # Local development:   docker compose up -d            → only Postgres (port 5433); run backend + frontend with npm run dev
 # Whole stack in Docker: docker compose --profile app up -d --build   → http://localhost:3000
+name: relish
+
 services:
   db:
     image: postgres:16
@@ -42,3 +44,4 @@ services:
 
 volumes:
   relish-data:
+    name: relish-data

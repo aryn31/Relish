@@ -18,7 +18,7 @@ The steps use **Railway** (simplest). Any host that runs Dockerfiles works the s
 ## 1. Push the code
 
 ```bash
-cd ~/Desktop/restro-menu/app
+cd ~/Desktop/restro-menu
 git add -A
 git commit -m "Split into frontend and backend"
 git push
@@ -73,7 +73,7 @@ DEMO_MODE=false
 Postgres service → **Connect** → copy the **Public Network** URL, then on your computer:
 
 ```bash
-cd ~/Desktop/restro-menu/app/backend
+cd ~/Desktop/restro-menu/backend
 DATABASE_URL="<public url>" npm run seed
 DATABASE_URL="<public url>" npm run photos
 ```
