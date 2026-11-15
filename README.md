@@ -360,7 +360,6 @@ When `DEMO_MODE=true` is set on the frontend, a quick-login drawer is available 
 
 | Persona / Role | Email | Password | Operational State / Context |
 |---|---|---|---|
-| **Super Admin** | `super@example.com` | `ChangeMe123!` | Platform Owner with full governance permissions |
 | **Restaurant Admin** | `owner@greenfork.demo` | `Demo@1234` | The Green Fork (Active restaurant, live menu) |
 | **Restaurant Admin** | `owner@spicegarden.demo` | `Demo@1234` | Spice Garden (Active restaurant, live menu) |
 | **Restaurant Admin** | `owner@lakeview.demo` | `Demo@1234` | Lakeview Bistro (Active restaurant, live menu) |
