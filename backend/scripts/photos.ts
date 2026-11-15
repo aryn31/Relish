@@ -1,4 +1,4 @@
-// Downloads real food photos from Wikimedia Commons (open licences) for menu items. `npm run photos`
+// Downloads real food photos from Wikimedia Commons (open licences) for the demo restaurants' menu items. `npm run photos`
 import { db, pool } from "../src/db";
 import { storeImage } from "../src/files";
 
@@ -12,6 +12,8 @@ const Q: Record<string, string> = {
   "Gobi Manchurian": "gobi manchurian", "Butter Chicken": "butter chicken", "Mutton Rogan Josh": "rogan josh", "Chicken Biryani": "chicken biryani", "Palak Paneer": "palak paneer",
   "Dal Makhani": "dal makhani", "Paneer Butter Masala": "paneer butter masala", "Garlic Bread": "garlic bread", "Paneer Tikka": "paneer tikka",
 };
+// Only demo restaurants (email ends in ".demo") get photos, so real restaurants' images are never touched.
+const DEMO = "restaurant_id IN (SELECT id FROM restaurants WHERE email LIKE '%.demo')";
 const OK = /^(CC BY|CC BY-SA|CC0|Public domain|PD)/i;
 const sniff = (b: Buffer) => (b[0] === 0xff && b[1] === 0xd8 ? "jpg" : b.subarray(1, 4).toString() === "PNG" ? "png" : b.subarray(0, 4).toString() === "RIFF" ? "webp" : null);
 const strip = (h: string) => h.replace(/<[^>]*>/g, "").trim();
@@ -30,7 +32,7 @@ async function find(term: string) {
 }
 
 async function main() {
-  const names = ((await db.prepare("SELECT DISTINCT name FROM items WHERE deleted=0 ORDER BY name").all()) as { name: string }[]).map((r) => r.name);
+  const names = ((await db.prepare(`SELECT DISTINCT name FROM items WHERE deleted=0 AND ${DEMO} ORDER BY name`).all()) as { name: string }[]).map((r) => r.name);
   const prev = (await db.prepare("SELECT value FROM settings WHERE key='photo_credits'").get()) as { value: string } | undefined;
   const credits: Record<string, unknown>[] = prev ? JSON.parse(prev.value) : [];
   const done = new Set(credits.map((c) => c.item as string));
@@ -44,7 +46,7 @@ async function main() {
       for (let a = 0; a < 4 && !buf; a++) { const r = await fetch(hit.url, { headers: { "user-agent": UA } }); if (r.ok) buf = Buffer.from(await r.arrayBuffer()); else await new Promise((s) => setTimeout(s, 2500 * (a + 1))); }
       const ext = buf && sniff(buf); if (!buf || !ext) { console.log(`✗ ${name}: download failed`); continue; }
       const file = await storeImage(buf, ext);
-      await db.prepare("UPDATE items SET image=? WHERE name=? AND deleted=0").run(file, name);
+      await db.prepare(`UPDATE items SET image=? WHERE name=? AND deleted=0 AND ${DEMO}`).run(file, name);
       credits.push({ item: name, title: hit.title, author: hit.author, license: hit.lic, source: hit.page });
       console.log(`✓ ${name} ← ${hit.title} (${hit.lic})`);
     } catch (e) { console.log(`✗ ${name}: ${(e as Error).message}`); }

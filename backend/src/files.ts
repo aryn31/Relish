@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { db } from "./db";
 
 // Uploaded images (menu photos, UPI QR codes).
@@ -38,6 +38,14 @@ export async function storeImage(buf: Buffer, ext: string): Promise<string> {
   if (c) await c.send(new PutObjectCommand({ Bucket: BUCKET, Key: PREFIX + name, Body: buf, ContentType: TYPES[ext] }));
   else await db.prepare("INSERT INTO files(name,mime,data) VALUES(?,?,?)").run(name, TYPES[ext], buf);
   return name;
+}
+
+/** Deletes stored images (from the database and, if configured, the bucket). */
+export async function deleteImages(names: string[]): Promise<void> {
+  if (!names.length) return;
+  await db.prepare("DELETE FROM files WHERE name = ANY(?::text[])").run(names);
+  const c = s3();
+  if (c) for (const n of names) await c.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: PREFIX + n })).catch(() => {});
 }
 
 /** Validates an uploaded file (by content, not filename) and size (<=5MB); returns stored name or an error string. */

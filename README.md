@@ -1,5 +1,4 @@
 # Relish — Multi-Restaurant Ordering Platform (PRD v2.0, release 1)
-# Relish2 — Multi-Restaurant Ordering Platform (PRD v2.0, release 1)
 
 The app is split into two services:
 
@@ -27,6 +26,7 @@ cp .env.example .env.local           # first time only
 npm install
 npm run seed                         # demo data (optional, safe to re-run)
 npm run photos                       # real food photos from Wikimedia Commons (optional)
+# npm run unseed -- --yes            # removes all demo data later (real data is kept)
 npm run dev                          # API on http://localhost:4000
 
 cd ../frontend                       # in a second terminal

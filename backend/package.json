@@ -8,6 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "seed": "tsx --env-file-if-exists=.env.local scripts/seed.ts",
     "photos": "tsx --env-file-if-exists=.env.local scripts/photos.ts",
+    "unseed": "tsx --env-file-if-exists=.env.local scripts/unseed.ts",
     "e2e": "node scripts/e2e.mjs"
   },
   "dependencies": {

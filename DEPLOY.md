@@ -78,6 +78,12 @@ DATABASE_URL="<public url>" npm run seed
 DATABASE_URL="<public url>" npm run photos
 ```
 
+To remove the demo data later (real restaurants, accounts and orders are kept):
+```bash
+DATABASE_URL="<public url>" npm run unseed            # dry run: shows what would be removed
+DATABASE_URL="<public url>" npm run unseed -- --yes   # removes it
+```
+
 (Add `DATABASE_SSL=true` in front if your provider requires TLS.)
 
 ## Image bucket (optional)
