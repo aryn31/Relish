@@ -5,7 +5,6 @@ import { activateRestaurant, deactivateRestaurant } from "@/app/actions/super";
 import PageHead from "@/components/PageHead";
 import Flash from "@/components/Flash";
 import Confirm from "@/components/Confirm";
-import Link from "next/link";
 import { tr } from "@/lib/i18n";
 const NAMES: Record<string, string> = { approved: "approval", fee: "setup fee", upi: "UPI QR", menu: "menu", table: "a table", reviewed: "owner review" };
 const FEE: Record<string, string> = { not_assigned: "not assigned", awaiting: "awaiting payment", confirmed: "confirmed" };

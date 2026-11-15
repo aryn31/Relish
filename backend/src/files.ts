@@ -30,7 +30,6 @@ function s3(): S3Client | null {
     responseChecksumValidation: "WHEN_REQUIRED",
   }));
 }
-export const storageMode = () => (BUCKET ? "bucket" : "database");
 
 /** Store an already-validated image buffer; returns its file name (id). */
 export async function storeImage(buf: Buffer, ext: string): Promise<string> {

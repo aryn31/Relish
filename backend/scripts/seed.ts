@@ -1,6 +1,4 @@
 // Demo data: `npm run seed`. Safe to re-run (skips if already seeded).
-import fs from "fs";
-import path from "path";
 import zlib from "zlib";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";

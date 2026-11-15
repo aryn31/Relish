@@ -1,7 +1,4 @@
 // Downloads real food photos from Wikimedia Commons (open licences) for menu items. `npm run photos`
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
 import { db, pool } from "../src/db";
 import { storeImage } from "../src/files";
 

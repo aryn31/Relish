@@ -122,12 +122,6 @@ export const db = {
 };
 export { pool };
 
-export const inr = (paise: number) => {
-  const s = (paise / 100).toFixed(2);
-  const [i, d] = s.split(".");
-  const last3 = i.slice(-3), rest = i.slice(0, -3);
-  return "₹" + (rest ? rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," : "") + last3 + "." + d;
-};
 
 export async function log(actor: number | null, action: string, detail = "") {
   await db.prepare("INSERT INTO oplog(actor_id,action,detail) VALUES(?,?,?)").run(actor, action, detail);
@@ -148,8 +142,3 @@ export async function rateOk(key: string, n: number, windowSec: number): Promise
   return true;
 }
 
-export function fmtDate(s: string | Date | null | undefined, lang = "en") {
-  if (!s) return "";
-  const d = s instanceof Date ? s : new Date(s);
-  return d.toLocaleString(lang === "hi" ? "hi-IN" : "en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}

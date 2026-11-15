@@ -35,11 +35,6 @@ export async function requireUser(req: Request): Promise<User> {
   const u = await currentUser(req);
   return u ?? fail("Please sign in.", 401);
 }
-export async function requireCustomer(req: Request): Promise<User> {
-  const u = await requireUser(req);
-  if (u.role !== "customer") fail("Please sign in as a customer.", 403);
-  return u;
-}
 export async function requireRestAdmin(req: Request): Promise<User & { restaurant_id: number }> {
   const u = await requireUser(req);
   if (u.role !== "restaurant_admin" || !u.restaurant_id) fail("Not allowed.", 403);
